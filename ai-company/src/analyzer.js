@@ -6,6 +6,7 @@ import { runModelTournament } from "./backtest.js";
 import { classifyMarketRegime } from "./marketRegime.js";
 import { assessDataQuality } from "./dataQuality.js";
 import { estimateTradingCosts } from "./costs.js";
+import { buildWorldClassIntelligence } from "./worldClassIntelligence.js";
 
 const MIN_CANDLES = 90;
 const DIRECTIONS = ["買い", "売り", "見送り"];
@@ -258,6 +259,15 @@ export async function analyzeSymbol(symbol, options = {}) {
     validationLabel: "検証用シグナル",
     warnings: buildWarnings(features, warning, regime, dataQuality, costs)
   };
+  signal.intelligence = buildWorldClassIntelligence({
+    asset,
+    signal,
+    features,
+    tournament,
+    regime,
+    dataQuality,
+    costs
+  });
   signal.explanation = buildAiExplanation(asset, signal, features);
   signal.xDraft = buildXDraft(asset, signal);
 
@@ -284,6 +294,7 @@ export async function analyzeSymbol(symbol, options = {}) {
     dataQuality,
     costs,
     regime,
+    intelligence: signal.intelligence,
     tournament: formatTournament(tournament),
     generatedAt: new Date().toISOString()
   };

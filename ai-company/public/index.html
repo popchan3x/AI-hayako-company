@@ -23,7 +23,9 @@
         <label for="providerSelect">データ</label>
         <select id="providerSelect">
           <option value="demo">デモデータ</option>
-          <option value="free-stooq">無料データ</option>
+          <option value="free-composite">無料データ（自動切替）</option>
+          <option value="free-stooq">無料データ（Stooqのみ）</option>
+          <option value="free-yahoo">無料データ（Yahooのみ）</option>
         </select>
 
         <button id="analyzeButton" type="button">分析</button>
@@ -61,6 +63,24 @@
           </div>
         </section>
 
+        <section class="panel intelligence-panel">
+          <div class="panel-title-row">
+            <div>
+              <p class="eyebrow">最高級分析</p>
+              <h2>World Class Intelligence</h2>
+            </div>
+            <div class="gate" id="autoTradeGate">-</div>
+          </div>
+
+          <dl class="intelligence-grid">
+            <div><dt>勝ち筋スコア</dt><dd id="intelligenceScore">-</dd></div>
+            <div><dt>実運用準備度</dt><dd id="readinessScore">-</dd></div>
+            <div><dt>総合判定</dt><dd id="intelligenceVerdict">-</dd></div>
+          </dl>
+
+          <div class="factor-grid" id="factorScores"></div>
+        </section>
+
         <section class="chart-band">
           <canvas id="priceChart" width="1100" height="360"></canvas>
         </section>
@@ -84,6 +104,33 @@
           <div class="panel">
             <h2>リスク概要</h2>
             <ul id="riskSummary"></ul>
+          </div>
+        </section>
+
+        <section class="columns">
+          <div class="panel">
+            <h2>まだ弱い部分</h2>
+            <ul id="blindSpots"></ul>
+          </div>
+          <div class="panel">
+            <h2>次に足すデータ</h2>
+            <ul id="dataUpgrades"></ul>
+          </div>
+        </section>
+
+        <section class="panel">
+          <h2>外部データ接続マップ</h2>
+          <div class="table-wrap">
+            <table class="compact-table">
+              <thead>
+                <tr>
+                  <th>データ</th>
+                  <th>状態</th>
+                  <th>使い道</th>
+                </tr>
+              </thead>
+              <tbody id="externalSignals"></tbody>
+            </table>
           </div>
         </section>
 
@@ -123,6 +170,8 @@
                   <th>相場環境</th>
                   <th>主導モデル</th>
                   <th>一致度</th>
+                  <th>勝ち筋</th>
+                  <th>自動売買</th>
                   <th>品質</th>
                   <th>コスト</th>
                 </tr>

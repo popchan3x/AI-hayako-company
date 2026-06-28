@@ -141,6 +141,24 @@ button:disabled {
   padding: 18px;
 }
 
+.panel-title-row {
+  align-items: flex-start;
+  display: flex;
+  gap: 14px;
+  justify-content: space-between;
+}
+
+.gate {
+  background: #fff4ef;
+  border: 1px solid #e3b9ab;
+  border-radius: 6px;
+  color: var(--danger);
+  font-size: 13px;
+  font-weight: 700;
+  padding: 8px 10px;
+  text-align: center;
+}
+
 .compact p,
 #explanation,
 li {
@@ -163,6 +181,51 @@ dl {
 
 .learning-grid {
   grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.intelligence-grid {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  margin-bottom: 16px;
+}
+
+.factor-grid {
+  display: grid;
+  gap: 12px;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.factor {
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 12px;
+}
+
+.factor-head {
+  align-items: center;
+  display: flex;
+  font-size: 13px;
+  justify-content: space-between;
+}
+
+.factor-bar {
+  background: #edf1e8;
+  border-radius: 999px;
+  height: 7px;
+  margin: 8px 0;
+  overflow: hidden;
+}
+
+.factor-bar span {
+  background: var(--accent);
+  display: block;
+  height: 100%;
+}
+
+.factor p {
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.45;
+  margin: 0;
 }
 
 dt {
@@ -210,6 +273,10 @@ table {
   width: 100%;
 }
 
+.compact-table {
+  min-width: 760px;
+}
+
 th,
 td {
   border-bottom: 1px solid var(--line);
@@ -233,7 +300,9 @@ textarea {
   .layout,
   .signal-grid,
   .columns,
-  .learning-grid {
+  .learning-grid,
+  .intelligence-grid,
+  .factor-grid {
     grid-template-columns: 1fr;
   }
 

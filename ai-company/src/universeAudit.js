@@ -2,7 +2,7 @@ import { mkdir, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { ASSETS } from "./assets.js";
-import { fetchFreeCandles, generateDemoCandles } from "./dataProvider.js";
+import { fetchFreeCandles, fetchStooqCandles, fetchYahooCandles, generateDemoCandles } from "./dataProvider.js";
 import { assessDataQuality } from "./dataQuality.js";
 import { latestFeatures, round } from "./indicators.js";
 
@@ -88,12 +88,14 @@ function reasonFor(row) {
 }
 
 async function auditAsset(asset, options = {}) {
-  const fetchCandles = options.fetchCandles || fetchFreeCandles;
+  const provider = options.provider || "free-composite";
+  const fetchCandles = options.fetchCandles
+    || (provider === "free-stooq" ? fetchStooqCandles : provider === "free-yahoo" ? fetchYahooCandles : fetchFreeCandles);
   const payload = options.useDemo
     ? { candles: generateDemoCandles(asset.symbol), source: "demo", warning: "デモデータで監査の形を確認しました。" }
     : await fetchCandles(asset.symbol);
   const { candles, warning } = payload;
-  const source = options.useDemo ? "demo" : payload.source || "free-stooq";
+  const source = options.useDemo ? "demo" : payload.source || provider;
   const quality = assessDataQuality(candles, source);
   const usableCandles = candles.length >= 20 ? candles : generateDemoCandles(asset.symbol);
   const features = latestFeatures(usableCandles);
@@ -101,7 +103,7 @@ async function auditAsset(asset, options = {}) {
     symbol: asset.symbol,
     name: asset.name,
     group: asset.group,
-    dataSymbol: asset.dataSymbol,
+    dataSymbol: payload.dataSymbol || asset.dataSymbol,
     status: classifyDataStatus(candles, quality, warning),
     bars: candles.length,
     qualityScore: quality.score,
@@ -191,7 +193,7 @@ export async function auditUniverse(options = {}) {
   const result = {
     generatedAt: new Date().toISOString(),
     date,
-    source: options.useDemo ? "demo" : "free-stooq",
+    source: options.useDemo ? "demo" : options.provider || "free-composite",
     summary: summarize(rows),
     rows
   };

@@ -61,7 +61,7 @@ export function assessDataQuality(candles, source) {
     score -= 25;
     issues.push(`時系列の順番が崩れている場所が${timeOrderBreaks}件あります。`);
   }
-  if (source === "free-stooq" && staleHours !== null && staleHours > 72) {
+  if (source?.startsWith("free") && staleHours !== null && staleHours > 72) {
     score -= 10;
     issues.push(`最新データが約${round(staleHours, 1)}時間前です。`);
   }

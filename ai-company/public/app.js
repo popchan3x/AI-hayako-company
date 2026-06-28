@@ -21,6 +21,14 @@ const elements = {
   dataQuality: document.querySelector("#dataQuality"),
   tradingCost: document.querySelector("#tradingCost"),
   voteWeights: document.querySelector("#voteWeights"),
+  intelligenceScore: document.querySelector("#intelligenceScore"),
+  readinessScore: document.querySelector("#readinessScore"),
+  intelligenceVerdict: document.querySelector("#intelligenceVerdict"),
+  autoTradeGate: document.querySelector("#autoTradeGate"),
+  factorScores: document.querySelector("#factorScores"),
+  blindSpots: document.querySelector("#blindSpots"),
+  dataUpgrades: document.querySelector("#dataUpgrades"),
+  externalSignals: document.querySelector("#externalSignals"),
   explanation: document.querySelector("#explanation"),
   reasons: document.querySelector("#reasons"),
   warnings: document.querySelector("#warnings"),
@@ -99,6 +107,8 @@ function renderScan(rows) {
       <td>${escapeHtml(row.regime)}</td>
       <td>${escapeHtml(row.model)}</td>
       <td>${escapeHtml(row.agreement)}%</td>
+      <td>${escapeHtml(row.edgeScore)}/100</td>
+      <td>${escapeHtml(row.autoTradeGate)}</td>
       <td>${escapeHtml(row.quality)}/100</td>
       <td>${escapeHtml(row.costBps)}bp</td>
     </tr>
@@ -111,6 +121,42 @@ function renderLearning(summary) {
   elements.learningPending.textContent = summary.totals.pendingOutcomes;
   elements.learningNewSignals.textContent = summary.totals.newSignals;
   listItems(elements.learningActions, summary.nextActions || []);
+}
+
+function renderFactorScores(factors) {
+  elements.factorScores.innerHTML = factors.map((factor) => `
+    <div class="factor">
+      <div class="factor-head">
+        <strong>${escapeHtml(factor.name)}</strong>
+        <span>${escapeHtml(factor.score)}/100</span>
+      </div>
+      <div class="factor-bar" aria-hidden="true">
+        <span style="width: ${Math.max(0, Math.min(100, factor.score))}%"></span>
+      </div>
+      <p>${escapeHtml(factor.detail)}</p>
+    </div>
+  `).join("");
+}
+
+function renderExternalSignals(items) {
+  elements.externalSignals.innerHTML = items.map((item) => `
+    <tr>
+      <td>${escapeHtml(item.name)}</td>
+      <td>${escapeHtml(item.status)}</td>
+      <td>${escapeHtml(item.use)}</td>
+    </tr>
+  `).join("");
+}
+
+function clearIntelligence() {
+  elements.intelligenceScore.textContent = "-";
+  elements.readinessScore.textContent = "-";
+  elements.intelligenceVerdict.textContent = "-";
+  elements.autoTradeGate.textContent = "-";
+  elements.factorScores.innerHTML = "";
+  listItems(elements.blindSpots, []);
+  listItems(elements.dataUpgrades, []);
+  elements.externalSignals.innerHTML = "";
 }
 
 function renderAnalysis(analysis) {
@@ -126,6 +172,7 @@ function renderAnalysis(analysis) {
     elements.dataQuality.textContent = analysis.dataQuality ? `${analysis.dataQuality.grade} ${analysis.dataQuality.score}/100` : "-";
     elements.tradingCost.textContent = "-";
     elements.voteWeights.textContent = "-";
+    clearIntelligence();
     elements.explanation.textContent = analysis.reason;
     listItems(elements.reasons, []);
     listItems(elements.warnings, [analysis.reason]);
@@ -149,6 +196,14 @@ function renderAnalysis(analysis) {
   elements.dataQuality.textContent = `${signal.dataQuality.grade} ${signal.dataQuality.score}/100`;
   elements.tradingCost.textContent = `${signal.costs.totalBps}bp`;
   elements.voteWeights.textContent = `買${signal.voteWeights.buy}% / 売${signal.voteWeights.sell}% / 待${signal.voteWeights.wait}%`;
+  elements.intelligenceScore.textContent = `${signal.intelligence.edgeScore}/100`;
+  elements.readinessScore.textContent = `${signal.intelligence.readinessScore}/100`;
+  elements.intelligenceVerdict.textContent = signal.intelligence.verdict;
+  elements.autoTradeGate.textContent = signal.intelligence.autoTradeGate.status;
+  renderFactorScores(signal.intelligence.factors);
+  listItems(elements.blindSpots, signal.intelligence.blindSpots);
+  listItems(elements.dataUpgrades, signal.intelligence.nextDataUpgrades);
+  renderExternalSignals(signal.intelligence.externalSignals);
   elements.explanation.textContent = signal.explanation;
   listItems(elements.reasons, signal.reasons);
   listItems(elements.warnings, signal.warnings);

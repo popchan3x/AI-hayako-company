@@ -1,4 +1,4 @@
-﻿import { findAsset } from "./assets.js";
+import { findAsset } from "./assets.js";
 
 function hashSeed(text) {
   let hash = 2166136261;
@@ -65,38 +65,131 @@ function parseCsv(text) {
   }).filter((candle) => Number.isFinite(candle.close));
 }
 
-export async function fetchFreeCandles(symbol) {
+function fetchWithTimeout(url, options = {}) {
+  const fetchImpl = options.fetchImpl || fetch;
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), options.timeoutMs || 7000);
+  return fetchImpl(url, {
+    signal: controller.signal,
+    headers: {
+      "User-Agent": "Mozilla/5.0 HayakoMarketAI/0.1",
+      ...options.headers
+    }
+  }).finally(() => clearTimeout(timeout));
+}
+
+export function resolveYahooSymbol(asset) {
+  if (!asset) return null;
+  if (asset.group === "FX") return `${asset.symbol}=X`;
+  if (asset.symbol === "XAUUSD") return "GC=F";
+  if (asset.symbol === "XAGUSD") return "SI=F";
+  if (asset.symbol === "XPTUSD") return "PL=F";
+  if (asset.symbol === "XPDUSD") return "PA=F";
+  if (asset.dataSymbol.endsWith(".jp")) return `${asset.dataSymbol.split(".")[0]}.T`;
+  if (asset.dataSymbol.endsWith(".us")) return asset.dataSymbol.split(".")[0].toUpperCase();
+  return asset.symbol;
+}
+
+function parseYahooChart(payload) {
+  const result = payload?.chart?.result?.[0];
+  const timestamps = result?.timestamp || [];
+  const quote = result?.indicators?.quote?.[0] || {};
+  return timestamps.map((timestamp, index) => ({
+    time: new Date(timestamp * 1000).toISOString(),
+    open: Number(quote.open?.[index]),
+    high: Number(quote.high?.[index]),
+    low: Number(quote.low?.[index]),
+    close: Number(quote.close?.[index]),
+    volume: Number(quote.volume?.[index]) || 0
+  })).filter((candle) => (
+    Number.isFinite(candle.open)
+    && Number.isFinite(candle.high)
+    && Number.isFinite(candle.low)
+    && Number.isFinite(candle.close)
+    && candle.close > 0
+  ));
+}
+
+export async function fetchStooqCandles(symbol, options = {}) {
   const asset = findAsset(symbol);
   if (!asset) return { candles: [], source: "free-stooq", warning: "対象が未登録です。" };
   const url = `https://stooq.com/q/d/l/?s=${encodeURIComponent(asset.dataSymbol)}&i=d`;
-  const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), 7000);
   try {
-    const response = await fetch(url, { signal: controller.signal });
+    const response = await fetchWithTimeout(url, options);
     if (!response.ok) {
-      return { candles: [], source: "free-stooq", warning: `無料データ取得に失敗しました。HTTP ${response.status}` };
+      return { candles: [], source: "free-stooq", warning: `Stooqの取得に失敗しました。HTTP ${response.status}` };
     }
     const candles = parseCsv(await response.text());
     return {
       candles,
       source: "free-stooq",
-      warning: candles.length === 0 ? "無料データが空でした。" : "無料データは遅延や欠損の可能性があります。"
+      warning: candles.length === 0 ? "Stooqの無料データが空でした。" : "Stooqの無料データは遅延や欠損の可能性があります。"
     };
   } catch (error) {
-    return { candles: [], source: "free-stooq", warning: `無料データ取得に失敗しました: ${error.message}` };
-  } finally {
-    clearTimeout(timeout);
+    return { candles: [], source: "free-stooq", warning: `Stooqの取得に失敗しました: ${error.message}` };
   }
 }
 
-export async function getCandles({ symbol, provider = "demo" }) {
-  if (provider === "free-stooq") {
-    return fetchFreeCandles(symbol);
+export async function fetchYahooCandles(symbol, options = {}) {
+  const asset = findAsset(symbol);
+  if (!asset) return { candles: [], source: "free-yahoo", warning: "対象が未登録です。" };
+  const yahooSymbol = resolveYahooSymbol(asset);
+  const url = `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(yahooSymbol)}?range=1y&interval=1d&includePrePost=false`;
+  try {
+    const response = await fetchWithTimeout(url, options);
+    if (!response.ok) {
+      return { candles: [], source: "free-yahoo", warning: `Yahooの取得に失敗しました。HTTP ${response.status}` };
+    }
+    const payload = await response.json();
+    const error = payload?.chart?.error;
+    if (error) {
+      return { candles: [], source: "free-yahoo", warning: `Yahooの取得に失敗しました: ${error.description || error.code}` };
+    }
+    const candles = parseYahooChart(payload);
+    return {
+      candles,
+      source: "free-yahoo",
+      dataSymbol: yahooSymbol,
+      warning: candles.length === 0 ? "Yahooの無料データが空でした。" : "Yahooの無料データは遅延や欠損の可能性があります。"
+    };
+  } catch (error) {
+    return { candles: [], source: "free-yahoo", warning: `Yahooの取得に失敗しました: ${error.message}` };
   }
+}
+
+export async function fetchFreeCandles(symbol, options = {}) {
+  const stooq = await fetchStooqCandles(symbol, options);
+  if (stooq.candles.length > 0) {
+    return {
+      ...stooq,
+      source: "free-composite:free-stooq",
+      warning: `Stooqを採用しました。${stooq.warning}`
+    };
+  }
+
+  const yahoo = await fetchYahooCandles(symbol, options);
+  if (yahoo.candles.length > 0) {
+    return {
+      ...yahoo,
+      source: "free-composite:free-yahoo",
+      warning: `Stooqは未採用です。Yahooを採用しました。${yahoo.warning}`
+    };
+  }
+
+  return {
+    candles: [],
+    source: "free-composite",
+    warning: `無料データ取得に失敗しました。Stooq: ${stooq.warning} / Yahoo: ${yahoo.warning}`
+  };
+}
+
+export async function getCandles({ symbol, provider = "demo" }) {
+  if (provider === "free-stooq") return fetchStooqCandles(symbol);
+  if (provider === "free-yahoo") return fetchYahooCandles(symbol);
+  if (provider === "free-composite" || provider === "free") return fetchFreeCandles(symbol);
   return {
     candles: generateDemoCandles(symbol),
     source: "demo",
     warning: "デモデータです。実売買には使わず、検証用として扱ってください。"
   };
 }
-

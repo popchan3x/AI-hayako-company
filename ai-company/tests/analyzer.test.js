@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import { analyzeSymbol, listAssets, researchRoadmap } from "../src/analyzer.js";
 import { backtestCandidate, runModelTournament } from "../src/backtest.js";
 import { trendBreakoutCandidate } from "../src/candidates.js";
-import { generateDemoCandles } from "../src/dataProvider.js";
+import { fetchFreeCandles, fetchYahooCandles, generateDemoCandles, resolveYahooSymbol } from "../src/dataProvider.js";
 import { runDailyLearning } from "../src/learning.js";
 import { auditUniverse, classifyDataStatus, UNIVERSE_STATUS } from "../src/universeAudit.js";
 import { mkdtemp } from "node:fs/promises";
@@ -50,6 +50,11 @@ test("analyzer returns priced validation signal with regime and meta model", asy
   assert.equal(typeof result.signal.dataQuality.score, "number");
   assert.equal(typeof result.signal.costs.totalBps, "number");
   assert.equal(typeof result.signal.voteWeights.buy, "number");
+  assert.equal(typeof result.signal.intelligence.edgeScore, "number");
+  assert.equal(result.signal.intelligence.autoTradeGate.canAutoTrade, false);
+  assert.equal(result.signal.intelligence.sourceSafety.noExternalCodeExecuted, true);
+  assert.ok(result.signal.intelligence.factors.length >= 8);
+  assert.ok(result.signal.intelligence.externalSignals.length >= 5);
   assert.ok(result.signal.scenarios.length >= 3);
   assert.ok(result.signal.riskSummary.length >= 4);
   assert.ok(result.signal.reasons.length >= 3);
@@ -64,6 +69,63 @@ test("unknown asset is not guessed", async () => {
   assert.equal(result.ok, false);
   assert.equal(result.status, "分析不可");
   assert.equal(result.signal, null);
+});
+
+test("free data providers map symbols and parse yahoo chart payload", async () => {
+  const yahooPayload = {
+    chart: {
+      result: [{
+        timestamp: [1767225600, 1767312000],
+        indicators: {
+          quote: [{
+            open: [100, 101],
+            high: [102, 103],
+            low: [99, 100],
+            close: [101, 102],
+            volume: [1000, 1200]
+          }]
+        }
+      }],
+      error: null
+    }
+  };
+  const fetchImpl = async () => new Response(JSON.stringify(yahooPayload), { status: 200 });
+  const result = await fetchYahooCandles("7203JP", { fetchImpl });
+  assert.equal(resolveYahooSymbol(listAssets().find((asset) => asset.symbol === "7203JP")), "7203.T");
+  assert.equal(resolveYahooSymbol(listAssets().find((asset) => asset.symbol === "USDJPY")), "USDJPY=X");
+  assert.equal(resolveYahooSymbol(listAssets().find((asset) => asset.symbol === "XAUUSD")), "GC=F");
+  assert.equal(result.source, "free-yahoo");
+  assert.equal(result.dataSymbol, "7203.T");
+  assert.equal(result.candles.length, 2);
+  assert.equal(result.candles[1].close, 102);
+});
+
+test("composite free provider falls back from stooq to yahoo", async () => {
+  const yahooPayload = {
+    chart: {
+      result: [{
+        timestamp: [1767225600],
+        indicators: {
+          quote: [{
+            open: [2500],
+            high: [2520],
+            low: [2490],
+            close: [2510],
+            volume: [2000]
+          }]
+        }
+      }],
+      error: null
+    }
+  };
+  const fetchImpl = async (url) => {
+    if (String(url).includes("stooq.com")) return new Response("", { status: 500 });
+    return new Response(JSON.stringify(yahooPayload), { status: 200 });
+  };
+  const result = await fetchFreeCandles("XAUUSD", { fetchImpl });
+  assert.equal(result.source, "free-composite:free-yahoo");
+  assert.equal(result.dataSymbol, "GC=F");
+  assert.equal(result.candles.length, 1);
 });
 
 test("backtest produces finite walk-forward metrics", () => {
@@ -101,6 +163,7 @@ test("all demo assets can be analyzed for scan view", async () => {
   assert.equal(results.length, assets.length);
   assert.equal(results.every((result) => result.ok), true);
   assert.equal(results.every((result) => result.signal.dataQuality.score >= 90), true);
+  assert.equal(results.every((result) => result.signal.intelligence.autoTradeGate.analysisOnly), true);
 });
 
 test("daily learning stores one signal per asset without duplicate same-day records", async () => {

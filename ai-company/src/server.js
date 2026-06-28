@@ -82,6 +82,8 @@ async function handleApi(request, response) {
         regime: result.signal?.marketRegime?.name ?? "-",
         model: result.signal?.leadModel ?? "-",
         agreement: result.signal?.modelAgreement ?? 0,
+        edgeScore: result.signal?.intelligence?.edgeScore ?? 0,
+        autoTradeGate: result.signal?.intelligence?.autoTradeGate?.status ?? "-",
         quality: result.signal?.dataQuality?.score ?? result.dataQuality?.score ?? 0,
         costBps: result.signal?.costs?.totalBps ?? 0,
         reason: result.signal?.reasons?.[0] ?? result.reason
