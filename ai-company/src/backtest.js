@@ -1,4 +1,5 @@
 import { CANDIDATES } from "./candidates.js";
+import { classifyMarketRegime, modelFitBonus } from "./marketRegime.js";
 
 function maxDrawdown(equityCurve) {
   let peak = equityCurve[0] || 0;
@@ -66,25 +67,34 @@ export function backtestCandidate(candles, candidate, options = {}) {
   const grossWin = wins.reduce((sum, value) => sum + value, 0);
   const grossLoss = Math.abs(losses.reduce((sum, value) => sum + value, 0));
   const netReturn = returns.reduce((sum, value) => sum + value, 0);
+  const drawdown = maxDrawdown(equityCurve);
+  const winRate = returns.length ? wins.length / returns.length : 0;
+  const averageReturn = returns.length ? netReturn / returns.length : 0;
+  const profitFactor = grossLoss === 0 ? (grossWin > 0 ? 9.99 : 0) : grossWin / grossLoss;
 
   return {
     trades: returns.length,
-    winRate: returns.length ? wins.length / returns.length : 0,
-    profitFactor: grossLoss === 0 ? (grossWin > 0 ? 9.99 : 0) : grossWin / grossLoss,
+    winRate,
+    profitFactor,
+    averageReturn,
     netReturn,
-    maxDrawdown: maxDrawdown(equityCurve),
-    score: netReturn * 100 + (returns.length ? wins.length / returns.length : 0) * 35 - maxDrawdown(equityCurve) * 100
+    maxDrawdown: drawdown,
+    score: netReturn * 100 + winRate * 35 + profitFactor * 3 - drawdown * 100
   };
 }
 
 export function runModelTournament(candles) {
+  const regime = classifyMarketRegime(candles);
   return CANDIDATES.map((candidate) => {
     const currentSignal = candidate(candles);
     const metrics = backtestCandidate(candles, candidate);
+    const fitBonus = modelFitBonus(currentSignal.name, regime);
     return {
       name: currentSignal.name,
       currentSignal,
-      metrics
+      metrics,
+      regimeFit: fitBonus,
+      adjustedScore: metrics.score + fitBonus
     };
-  }).sort((a, b) => b.metrics.score - a.metrics.score);
+  }).sort((a, b) => b.adjustedScore - a.adjustedScore);
 }

@@ -16,5 +16,5 @@ export const ASSETS = [
 ];
 
 export function findAsset(symbol) {
-  return ASSETS.find((asset) => asset.symbol === String(symbol || "").toUpperCase());
+  return ASSETS.find((asset) => asset.symbol === String(symbol || "").trim().toUpperCase());
 }

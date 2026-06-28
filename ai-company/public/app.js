@@ -13,6 +13,9 @@ const elements = {
   entryPrice: document.querySelector("#entryPrice"),
   stopLoss: document.querySelector("#stopLoss"),
   takeProfit: document.querySelector("#takeProfit"),
+  regime: document.querySelector("#regime"),
+  selectedModel: document.querySelector("#selectedModel"),
+  modelAgreement: document.querySelector("#modelAgreement"),
   explanation: document.querySelector("#explanation"),
   reasons: document.querySelector("#reasons"),
   warnings: document.querySelector("#warnings"),
@@ -31,32 +34,42 @@ function setStatus(text) {
   elements.status.textContent = text;
 }
 
+function escapeHtml(value) {
+  return String(value)
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#039;");
+}
+
 function renderAssets() {
   const groups = [...new Set(state.assets.map((asset) => asset.group))];
   elements.assetSelect.innerHTML = groups.map((group) => {
     const options = state.assets
       .filter((asset) => asset.group === group)
-      .map((asset) => `<option value="${asset.symbol}">${asset.symbol} - ${asset.name}</option>`)
+      .map((asset) => `<option value="${escapeHtml(asset.symbol)}">${escapeHtml(asset.symbol)} - ${escapeHtml(asset.name)}</option>`)
       .join("");
-    return `<optgroup label="${group}">${options}</optgroup>`;
+    return `<optgroup label="${escapeHtml(group)}">${options}</optgroup>`;
   }).join("");
   elements.assetSelect.value = "XAUUSD";
 }
 
 function listItems(target, items) {
-  target.innerHTML = items.map((item) => `<li>${item}</li>`).join("");
+  target.innerHTML = items.map((item) => `<li>${escapeHtml(item)}</li>`).join("");
 }
 
 function renderTournament(rows) {
   elements.tournament.innerHTML = rows.map((row) => `
     <tr>
-      <td>${row.name}</td>
-      <td>${row.direction}</td>
-      <td>${row.confidence}</td>
-      <td>${row.trades}</td>
-      <td>${row.winRate}%</td>
-      <td>${row.netReturn}%</td>
-      <td>${row.maxDrawdown}%</td>
+      <td>${escapeHtml(row.name)}</td>
+      <td>${escapeHtml(row.direction)}</td>
+      <td>${escapeHtml(row.confidence)}</td>
+      <td>${escapeHtml(row.trades)}</td>
+      <td>${escapeHtml(row.winRate)}%</td>
+      <td>${escapeHtml(row.netReturn)}%</td>
+      <td>${escapeHtml(row.maxDrawdown)}%</td>
+      <td>${escapeHtml(row.score)}</td>
     </tr>
   `).join("");
 }
@@ -68,6 +81,9 @@ function renderAnalysis(analysis) {
     elements.entryPrice.textContent = "-";
     elements.stopLoss.textContent = "-";
     elements.takeProfit.textContent = "-";
+    elements.regime.textContent = "-";
+    elements.selectedModel.textContent = "-";
+    elements.modelAgreement.textContent = "-";
     elements.explanation.textContent = analysis.reason;
     listItems(elements.reasons, []);
     listItems(elements.warnings, [analysis.reason]);
@@ -83,6 +99,9 @@ function renderAnalysis(analysis) {
   elements.entryPrice.textContent = signal.entryPrice;
   elements.stopLoss.textContent = signal.stopLoss;
   elements.takeProfit.textContent = signal.takeProfit;
+  elements.regime.textContent = signal.marketRegime.name;
+  elements.selectedModel.textContent = signal.selectedModel;
+  elements.modelAgreement.textContent = `${signal.modelAgreement}%`;
   elements.explanation.textContent = signal.explanation;
   listItems(elements.reasons, signal.reasons);
   listItems(elements.warnings, signal.warnings);
@@ -142,7 +161,7 @@ async function analyze() {
     const provider = elements.providerSelect.value;
     state.analysis = await requestJson(`/api/analyze?symbol=${encodeURIComponent(symbol)}&provider=${provider}`);
     renderAnalysis(state.analysis);
-    setStatus(`${symbol} 完了`);
+    setStatus(`${symbol} 分析完了`);
   } catch (error) {
     setStatus("失敗");
     elements.explanation.textContent = error.message;
