@@ -233,6 +233,13 @@ li {
   background: #fbfcf9;
 }
 
+.section-note {
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.6;
+  margin: 0 0 14px;
+}
+
 .signal h2 {
   color: var(--accent);
   font-size: 34px;
@@ -248,6 +255,17 @@ dl {
 
 .learning-grid {
   grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.scheduler-grid {
+  border-top: 1px solid var(--line);
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  margin-top: 14px;
+  padding-top: 14px;
+}
+
+.scheduler-grid dd {
+  font-size: 16px;
 }
 
 .intelligence-grid {
@@ -437,6 +455,7 @@ textarea {
   .signal-grid,
   .columns,
   .learning-grid,
+  .scheduler-grid,
   .intelligence-grid,
   .factor-grid,
   .material-grid {

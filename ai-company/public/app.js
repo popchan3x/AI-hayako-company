@@ -50,6 +50,10 @@ const elements = {
   learningOutcomes: document.querySelector("#learningOutcomes"),
   learningPending: document.querySelector("#learningPending"),
   learningNewSignals: document.querySelector("#learningNewSignals"),
+  schedulerStatus: document.querySelector("#schedulerStatus"),
+  schedulerTime: document.querySelector("#schedulerTime"),
+  schedulerIntervals: document.querySelector("#schedulerIntervals"),
+  schedulerProvider: document.querySelector("#schedulerProvider"),
   learningActions: document.querySelector("#learningActions"),
   xDraft: document.querySelector("#xDraft"),
   chart: document.querySelector("#priceChart")
@@ -246,6 +250,13 @@ function renderLearning(summary) {
   elements.learningPending.textContent = summary.totals.pendingOutcomes;
   elements.learningNewSignals.textContent = summary.totals.newSignals;
   listItems(elements.learningActions, summary.nextActions || []);
+}
+
+function renderScheduler(scheduler) {
+  elements.schedulerStatus.textContent = scheduler.enabled ? "有効" : "停止";
+  elements.schedulerTime.textContent = `${String(scheduler.hour).padStart(2, "0")}:${String(scheduler.minute).padStart(2, "0")}`;
+  elements.schedulerIntervals.textContent = (scheduler.intervals || []).map((interval) => TIMEFRAME_LABELS[interval] || interval).join(" / ");
+  elements.schedulerProvider.textContent = scheduler.provider || "-";
 }
 
 function renderFactorScores(factors) {
@@ -701,6 +712,11 @@ async function loadLearningSummary() {
   renderLearning(payload.summary);
 }
 
+async function loadSchedulerStatus() {
+  const payload = await requestJson("/api/learn/scheduler");
+  renderScheduler(payload.scheduler);
+}
+
 async function runDailyLearning() {
   elements.learnButton.disabled = true;
   setStatus("日次学習中");
@@ -761,6 +777,7 @@ async function init() {
   });
   elements.providerSelect.addEventListener("change", renderProviderHelp);
   await loadLearningSummary();
+  await loadSchedulerStatus();
   await analyze();
   await scanAll();
 }
