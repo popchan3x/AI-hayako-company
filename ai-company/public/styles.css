@@ -68,7 +68,7 @@ h2 {
 .layout {
   display: grid;
   gap: 20px;
-  grid-template-columns: 280px minmax(0, 1fr);
+  grid-template-columns: minmax(240px, 300px) minmax(0, 1fr);
   padding: 20px;
 }
 
@@ -84,6 +84,8 @@ h2 {
   align-self: start;
   display: grid;
   gap: 12px;
+  min-width: 0;
+  overflow: hidden;
   padding: 16px;
   position: sticky;
   top: 16px;
@@ -101,12 +103,15 @@ textarea {
   border: 1px solid var(--line);
   border-radius: 6px;
   font: inherit;
+  max-width: 100%;
+  width: 100%;
 }
 
 select {
   background: #fbfcf9;
   min-height: 42px;
   padding: 0 10px;
+  text-overflow: ellipsis;
 }
 
 button {
@@ -126,9 +131,29 @@ button:disabled {
   opacity: 0.65;
 }
 
+.timeframe-tabs {
+  display: grid;
+  gap: 6px;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.timeframe-tabs button {
+  background: #fbfcf9;
+  color: var(--text);
+  font-size: 12px;
+  min-height: 36px;
+  padding: 0 6px;
+}
+
+.timeframe-tabs button.active {
+  background: var(--accent);
+  color: #ffffff;
+}
+
 .workspace {
   display: grid;
   gap: 20px;
+  min-width: 0;
 }
 
 .signal-grid {
@@ -138,6 +163,7 @@ button:disabled {
 }
 
 .panel {
+  min-width: 0;
   padding: 18px;
 }
 
@@ -159,11 +185,52 @@ button:disabled {
   text-align: center;
 }
 
+.source-pill {
+  background: #101820;
+  border: 1px solid #314454;
+  border-radius: 6px;
+  color: #dce3ea;
+  font-size: 13px;
+  font-weight: 700;
+  max-width: 220px;
+  overflow: hidden;
+  padding: 8px 10px;
+  text-align: center;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.tradingview-panel {
+  display: grid;
+  gap: 14px;
+}
+
+.external-chart-shell {
+  background: #101820;
+  border: 1px solid #314454;
+  border-radius: 8px;
+  height: min(680px, 72vh);
+  min-height: 520px;
+  overflow: hidden;
+  width: 100%;
+}
+
+.external-chart-shell > div,
+.external-chart-shell iframe {
+  height: 100% !important;
+  width: 100% !important;
+}
+
 .compact p,
 #explanation,
 li {
   color: var(--muted);
   line-height: 1.65;
+  overflow-wrap: anywhere;
+}
+
+.data-note {
+  background: #fbfcf9;
 }
 
 .signal h2 {
@@ -228,6 +295,73 @@ dl {
   margin: 0;
 }
 
+.materials-panel {
+  display: grid;
+  gap: 14px;
+}
+
+.material-summary {
+  color: var(--muted);
+  display: grid;
+  gap: 6px;
+  line-height: 1.6;
+}
+
+.material-grid {
+  display: grid;
+  gap: 12px;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.material-card {
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  display: grid;
+  gap: 8px;
+  min-height: 136px;
+  padding: 12px;
+}
+
+.material-card header {
+  align-items: center;
+  display: flex;
+  justify-content: space-between;
+}
+
+.material-card strong {
+  font-size: 13px;
+}
+
+.material-card span {
+  color: var(--accent);
+  font-weight: 700;
+}
+
+.material-meter {
+  background: #edf1e8;
+  border-radius: 999px;
+  height: 8px;
+  overflow: hidden;
+}
+
+.material-meter i {
+  background: var(--accent);
+  display: block;
+  height: 100%;
+}
+
+.material-card p,
+.playbook-list {
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.55;
+}
+
+.playbook-list {
+  display: grid;
+  gap: 4px;
+}
+
 dt {
   color: var(--muted);
   font-size: 12px;
@@ -241,14 +375,15 @@ dd {
 }
 
 .chart-band {
-  min-height: 360px;
+  min-height: 500px;
   overflow: hidden;
-  padding: 12px;
+  padding: 14px;
+  min-width: 0;
 }
 
 canvas {
   display: block;
-  height: 336px;
+  height: 468px;
   width: 100%;
 }
 
@@ -265,6 +400,7 @@ ul {
 
 .table-wrap {
   overflow-x: auto;
+  max-width: 100%;
 }
 
 table {
@@ -302,7 +438,8 @@ textarea {
   .columns,
   .learning-grid,
   .intelligence-grid,
-  .factor-grid {
+  .factor-grid,
+  .material-grid {
     grid-template-columns: 1fr;
   }
 

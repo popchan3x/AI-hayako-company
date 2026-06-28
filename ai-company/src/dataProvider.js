@@ -1,4 +1,21 @@
 import { findAsset } from "./assets.js";
+import { execFile } from "node:child_process";
+import { promisify } from "node:util";
+
+const execFileAsync = promisify(execFile);
+
+export const TIMEFRAMES = {
+  "1m": { label: "1分", milliseconds: 60 * 1000, yahooInterval: "1m", yahooRange: "7d", demoCount: 360 },
+  "5m": { label: "5分", milliseconds: 5 * 60 * 1000, yahooInterval: "5m", yahooRange: "5d", demoCount: 320 },
+  "15m": { label: "15分", milliseconds: 15 * 60 * 1000, yahooInterval: "15m", yahooRange: "1mo", demoCount: 320 },
+  "1h": { label: "1時間", milliseconds: 60 * 60 * 1000, yahooInterval: "60m", yahooRange: "3mo", demoCount: 320 },
+  "4h": { label: "4時間", milliseconds: 4 * 60 * 60 * 1000, yahooInterval: "60m", yahooRange: "6mo", demoCount: 260 },
+  "1d": { label: "日足", milliseconds: 24 * 60 * 60 * 1000, yahooInterval: "1d", yahooRange: "1y", demoCount: 260 }
+};
+
+export function normalizeTimeframe(interval = "1d") {
+  return TIMEFRAMES[interval] ? interval : "1d";
+}
 
 function hashSeed(text) {
   let hash = 2166136261;
@@ -17,22 +34,25 @@ function seededRandom(seed) {
   };
 }
 
-export function generateDemoCandles(symbol, count = 220) {
+export function generateDemoCandles(symbol, count, interval = "1d") {
   const asset = findAsset(symbol);
   if (!asset) return [];
+  const timeframe = TIMEFRAMES[normalizeTimeframe(interval)];
+  const candleCount = count || timeframe.demoCount || 220;
   const random = seededRandom(hashSeed(asset.symbol));
   const candles = [];
   let price = asset.basePrice;
   const now = Date.now();
-  const intervalMs = 15 * 60 * 1000;
+  const intervalMs = timeframe.milliseconds;
   const volatility = asset.group === "FX" ? 0.0018 : asset.group === "貴金属" ? 0.004 : 0.003;
+  const scaledVolatility = volatility * Math.max(0.35, Math.sqrt(intervalMs / (24 * 60 * 60 * 1000)));
 
-  for (let index = count - 1; index >= 0; index -= 1) {
-    const wave = Math.sin((count - index) / 13) * volatility * 0.8;
-    const drift = (random() - 0.48) * volatility + wave;
+  for (let index = candleCount - 1; index >= 0; index -= 1) {
+    const wave = Math.sin((candleCount - index) / 13) * scaledVolatility * 0.8;
+    const drift = (random() - 0.48) * scaledVolatility + wave;
     const open = price;
     const close = Math.max(0.0001, open * (1 + drift));
-    const range = Math.max(Math.abs(close - open), open * volatility * (0.6 + random()));
+    const range = Math.max(Math.abs(close - open), open * scaledVolatility * (0.6 + random()));
     const high = Math.max(open, close) + range * (0.25 + random() * 0.45);
     const low = Math.max(0.0001, Math.min(open, close) - range * (0.25 + random() * 0.45));
     const volume = Math.round(100000 + random() * 900000 + Math.abs(drift) * 100000000);
@@ -65,6 +85,23 @@ function parseCsv(text) {
   }).filter((candle) => Number.isFinite(candle.close));
 }
 
+function aggregateCandles(candles, bucketSize) {
+  const aggregated = [];
+  for (let index = 0; index < candles.length; index += bucketSize) {
+    const bucket = candles.slice(index, index + bucketSize);
+    if (bucket.length < bucketSize) continue;
+    aggregated.push({
+      time: bucket[0].time,
+      open: bucket[0].open,
+      high: Math.max(...bucket.map((candle) => candle.high)),
+      low: Math.min(...bucket.map((candle) => candle.low)),
+      close: bucket.at(-1).close,
+      volume: bucket.reduce((sum, candle) => sum + (candle.volume || 0), 0)
+    });
+  }
+  return aggregated;
+}
+
 function fetchWithTimeout(url, options = {}) {
   const fetchImpl = options.fetchImpl || fetch;
   const controller = new AbortController();
@@ -76,6 +113,74 @@ function fetchWithTimeout(url, options = {}) {
       ...options.headers
     }
   }).finally(() => clearTimeout(timeout));
+}
+
+function isCertificateFailure(error) {
+  return error?.cause?.code === "UNABLE_TO_VERIFY_LEAF_SIGNATURE"
+    || error?.cause?.code === "SELF_SIGNED_CERT_IN_CHAIN"
+    || /certificate|unable to verify|self signed/i.test(`${error?.message || ""} ${error?.cause?.message || ""}`);
+}
+
+async function fetchTextWithWindowsTrust(url, options = {}) {
+  if (options.fallbackFetchText) {
+    return {
+      ok: true,
+      status: 200,
+      text: await options.fallbackFetchText(url),
+      via: "test-fallback"
+    };
+  }
+  if (process.platform !== "win32") return null;
+
+  const script = [
+    "$ErrorActionPreference = 'Stop'",
+    "$ProgressPreference = 'SilentlyContinue'",
+    "[Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12",
+    "$headers = @{ 'User-Agent' = 'Mozilla/5.0 HayakoMarketAI/0.1' }",
+    "$response = Invoke-WebRequest -UseBasicParsing -Uri $env:HAYAKO_FETCH_URL -TimeoutSec 20 -Headers $headers",
+    "[Console]::Out.Write($response.Content)"
+  ].join("; ");
+
+  try {
+    const { stdout } = await execFileAsync("powershell.exe", ["-NoProfile", "-NonInteractive", "-Command", script], {
+      env: { ...process.env, HAYAKO_FETCH_URL: url },
+      timeout: Math.max(10000, (options.timeoutMs || 7000) + 8000),
+      maxBuffer: 25 * 1024 * 1024
+    });
+    return { ok: true, status: 200, text: stdout, via: "windows-trust" };
+  } catch (error) {
+    return {
+      ok: false,
+      status: 0,
+      text: "",
+      via: "windows-trust",
+      warning: `Windowsの信頼済み証明書経由でも取得に失敗しました: ${error.message}`
+    };
+  }
+}
+
+async function fetchText(url, options = {}) {
+  try {
+    const response = await fetchWithTimeout(url, options);
+    return {
+      ok: response.ok,
+      status: response.status,
+      text: await response.text(),
+      via: "node-fetch"
+    };
+  } catch (error) {
+    const fallback = isCertificateFailure(error) || options.fallbackFetchText
+      ? await fetchTextWithWindowsTrust(url, options)
+      : null;
+    if (fallback?.ok) return fallback;
+    return {
+      ok: false,
+      status: 0,
+      text: "",
+      via: "node-fetch",
+      warning: fallback?.warning || error.message
+    };
+  }
 }
 
 export function resolveYahooSymbol(asset) {
@@ -113,44 +218,58 @@ function parseYahooChart(payload) {
 export async function fetchStooqCandles(symbol, options = {}) {
   const asset = findAsset(symbol);
   if (!asset) return { candles: [], source: "free-stooq", warning: "対象が未登録です。" };
-  const url = `https://stooq.com/q/d/l/?s=${encodeURIComponent(asset.dataSymbol)}&i=d`;
-  try {
-    const response = await fetchWithTimeout(url, options);
-    if (!response.ok) {
-      return { candles: [], source: "free-stooq", warning: `Stooqの取得に失敗しました。HTTP ${response.status}` };
-    }
-    const candles = parseCsv(await response.text());
+  const interval = normalizeTimeframe(options.interval);
+  if (interval !== "1d") {
     return {
-      candles,
+      candles: [],
       source: "free-stooq",
-      warning: candles.length === 0 ? "Stooqの無料データが空でした。" : "Stooqの無料データは遅延や欠損の可能性があります。"
+      interval,
+      warning: `Stooqは現在、短期足ではなく日足だけを使います。選択時間足: ${TIMEFRAMES[interval].label}`
     };
-  } catch (error) {
-    return { candles: [], source: "free-stooq", warning: `Stooqの取得に失敗しました: ${error.message}` };
   }
+  const url = `https://stooq.com/q/d/l/?s=${encodeURIComponent(asset.dataSymbol)}&i=d`;
+  const response = await fetchText(url, options);
+  if (!response.ok) {
+    return { candles: [], source: "free-stooq", warning: `Stooqの取得に失敗しました。${response.warning || `HTTP ${response.status}`}` };
+  }
+  const candles = parseCsv(response.text);
+  return {
+    candles,
+    source: "free-stooq",
+    interval,
+    warning: candles.length === 0
+      ? `Stooqの無料データが空でした。取得方法: ${response.via}`
+      : `Stooqの無料データは遅延や欠損の可能性があります。取得方法: ${response.via}`
+  };
 }
 
 export async function fetchYahooCandles(symbol, options = {}) {
   const asset = findAsset(symbol);
   if (!asset) return { candles: [], source: "free-yahoo", warning: "対象が未登録です。" };
   const yahooSymbol = resolveYahooSymbol(asset);
-  const url = `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(yahooSymbol)}?range=1y&interval=1d&includePrePost=false`;
+  const interval = normalizeTimeframe(options.interval);
+  const timeframe = TIMEFRAMES[interval];
+  const url = `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(yahooSymbol)}?range=${timeframe.yahooRange}&interval=${timeframe.yahooInterval}&includePrePost=false`;
   try {
-    const response = await fetchWithTimeout(url, options);
+    const response = await fetchText(url, options);
     if (!response.ok) {
       return { candles: [], source: "free-yahoo", warning: `Yahooの取得に失敗しました。HTTP ${response.status}` };
     }
-    const payload = await response.json();
+    const payload = JSON.parse(response.text);
     const error = payload?.chart?.error;
     if (error) {
       return { candles: [], source: "free-yahoo", warning: `Yahooの取得に失敗しました: ${error.description || error.code}` };
     }
-    const candles = parseYahooChart(payload);
+    const rawCandles = parseYahooChart(payload);
+    const candles = interval === "4h" ? aggregateCandles(rawCandles, 4) : rawCandles;
     return {
       candles,
       source: "free-yahoo",
       dataSymbol: yahooSymbol,
-      warning: candles.length === 0 ? "Yahooの無料データが空でした。" : "Yahooの無料データは遅延や欠損の可能性があります。"
+      interval,
+      warning: candles.length === 0
+        ? `Yahooの無料データが空でした。取得方法: ${response.via}`
+        : `Yahooの無料データは遅延や欠損の可能性があります。取得方法: ${response.via} / 時間足: ${TIMEFRAMES[interval].label}`
     };
   } catch (error) {
     return { candles: [], source: "free-yahoo", warning: `Yahooの取得に失敗しました: ${error.message}` };
@@ -183,13 +302,15 @@ export async function fetchFreeCandles(symbol, options = {}) {
   };
 }
 
-export async function getCandles({ symbol, provider = "demo" }) {
-  if (provider === "free-stooq") return fetchStooqCandles(symbol);
-  if (provider === "free-yahoo") return fetchYahooCandles(symbol);
-  if (provider === "free-composite" || provider === "free") return fetchFreeCandles(symbol);
+export async function getCandles({ symbol, provider = "demo", interval = "1d" }) {
+  const timeframe = normalizeTimeframe(interval);
+  if (provider === "free-stooq") return fetchStooqCandles(symbol, { interval: timeframe });
+  if (provider === "free-yahoo") return fetchYahooCandles(symbol, { interval: timeframe });
+  if (provider === "free-composite" || provider === "free") return fetchFreeCandles(symbol, { interval: timeframe });
   return {
-    candles: generateDemoCandles(symbol),
+    candles: generateDemoCandles(symbol, undefined, timeframe),
     source: "demo",
+    interval: timeframe,
     warning: "デモデータです。実売買には使わず、検証用として扱ってください。"
   };
 }

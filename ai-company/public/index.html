@@ -28,6 +28,16 @@
           <option value="free-yahoo">無料データ（Yahooのみ）</option>
         </select>
 
+        <label>時間足</label>
+        <div class="timeframe-tabs" id="timeframeTabs" role="group" aria-label="時間足">
+          <button type="button" data-timeframe="1m">1分</button>
+          <button type="button" data-timeframe="5m">5分</button>
+          <button type="button" data-timeframe="15m">15分</button>
+          <button type="button" data-timeframe="1h" class="active">1時間</button>
+          <button type="button" data-timeframe="4h">4時間</button>
+          <button type="button" data-timeframe="1d">日足</button>
+        </div>
+
         <button id="analyzeButton" type="button">分析</button>
         <button id="scanButton" type="button" class="secondary">全体スキャン</button>
         <button id="learnButton" type="button" class="secondary">日次学習</button>
@@ -35,6 +45,11 @@
         <section class="panel compact">
           <h2>対象範囲</h2>
           <p>米国株、主要指数、FX、XAUUSD、XAGUSD、XPTUSD</p>
+        </section>
+
+        <section class="panel compact data-note">
+          <h2>データ説明</h2>
+          <p id="providerHelp">デモデータは画面確認と検証用の仮データです。</p>
         </section>
       </aside>
 
@@ -81,8 +96,32 @@
           <div class="factor-grid" id="factorScores"></div>
         </section>
 
+        <section class="panel tradingview-panel">
+          <div class="panel-title-row">
+            <div>
+              <p class="eyebrow">公式チャート</p>
+              <h2>TradingView</h2>
+            </div>
+            <div class="source-pill" id="externalChartStatus">-</div>
+          </div>
+          <div class="external-chart-shell" id="externalChart" aria-label="TradingView chart"></div>
+        </section>
+
         <section class="chart-band">
           <canvas id="priceChart" width="1100" height="360"></canvas>
+        </section>
+
+        <section class="panel materials-panel">
+          <div class="panel-title-row">
+            <div>
+              <p class="eyebrow">分析材料</p>
+              <h2>何を見ているか</h2>
+            </div>
+            <div class="source-pill" id="materialTimeframe">-</div>
+          </div>
+          <div class="material-summary" id="materialSummary"></div>
+          <div class="material-grid" id="materialCards"></div>
+          <ul class="playbook-list" id="strategyPlaybook"></ul>
         </section>
 
         <section class="columns">

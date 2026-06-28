@@ -1,5 +1,5 @@
 import { ASSETS, findAsset } from "./assets.js";
-import { getCandles } from "./dataProvider.js";
+import { getCandles, TIMEFRAMES, normalizeTimeframe } from "./dataProvider.js";
 import { latestFeatures, round } from "./indicators.js";
 import { buildPricePlan } from "./pricing.js";
 import { runModelTournament } from "./backtest.js";
@@ -166,6 +166,50 @@ function buildRiskSummary(regime, dataQuality, costs, modelAgreement) {
   return items.slice(0, 6);
 }
 
+function scoreFromDistance(value, center, width) {
+  return clamp(Math.round(100 - Math.abs(value - center) * width), 0, 100);
+}
+
+function buildAnalysisMaterials(features, tournament, regime, dataQuality, costs, timeframe) {
+  const leader = tournament[0];
+  const trendScore = features.sma20 > features.sma50 ? 72 : 48;
+  const momentumScore = scoreFromDistance(features.rsi14 || 50, 58, 2.2);
+  const volatilityScore = features.atr14 && features.close
+    ? clamp(Math.round((features.atr14 / features.close) * 5200), 0, 100)
+    : 0;
+  const volumeScore = clamp(Math.round((features.volumeRatio || 0) * 70), 0, 100);
+  const levelScore = features.support && features.resistance
+    ? clamp(Math.round(((features.resistance - features.support) / features.close) * 4000), 0, 100)
+    : 0;
+
+  return {
+    timeframe: {
+      value: timeframe,
+      label: TIMEFRAMES[timeframe]?.label || timeframe
+    },
+    summary: [
+      "価格の方向、勢い、荒さ、出来高、節目、モデル大会、コスト、データ品質を同時に見ています。",
+      "AIは売買を直感で決めず、数字の矛盾チェックとシナリオ整理に使います。",
+      "有料級ツールの考え方に合わせ、見た目、根拠、検証結果、注意点を1画面に集約します。"
+    ],
+    cards: [
+      { name: "トレンド", score: trendScore, detail: `20本平均と50本平均の位置を確認。現在は${features.sma20 > features.sma50 ? "上向き寄り" : "下向きまたは横ばい寄り"}です。` },
+      { name: "勢い", score: momentumScore, detail: `RSIは${round(features.rsi14, 1)}です。買われすぎ、売られすぎ、伸び余地を見ます。` },
+      { name: "荒さ", score: volatilityScore, detail: `ATRは価格の${round((features.atr14 / features.close) * 100, 2)}%です。損切り幅と急変リスクに使います。` },
+      { name: "出来高", score: volumeScore, detail: `直近出来高は平均比${round(features.volumeRatio, 2)}倍です。動きの本気度を見ます。` },
+      { name: "節目", score: levelScore, detail: `支持線${round(features.support, 4)}、抵抗線${round(features.resistance, 4)}を入口と撤退の目安にします。` },
+      { name: "モデル大会", score: clamp(Math.round((leader?.adjustedScore || 0) + 55), 0, 100), detail: `${leader?.name || "未計算"}が現在の首位です。複数モデルの勝ち筋を比較します。` },
+      { name: "コスト", score: clamp(100 - costs.totalBps * 8, 0, 100), detail: `想定コストは${costs.totalBps}bpです。短期足ほど重く見ます。` },
+      { name: "データ品質", score: dataQuality.score, detail: `${dataQuality.grade} ${dataQuality.score}/100です。欠損や遅延がある時は見送りを強めます。` }
+    ],
+    playbook: [
+      `${regime.name}では、主役モデルだけでなくモデル一致度を重視します。`,
+      "入口、損切り、利確はチャートの水平線で確認します。",
+      "短期足で方向が出ても、日足の大きな流れと逆ならサイズを小さく扱います。"
+    ]
+  };
+}
+
 function selectMetaSignal(tournament, features, regime, dataQuality, costs) {
   const winner = tournament[0];
   const base = winner.currentSignal;
@@ -235,10 +279,12 @@ function selectMetaSignal(tournament, features, regime, dataQuality, costs) {
 export async function analyzeSymbol(symbol, options = {}) {
   const asset = findAsset(symbol);
   if (!asset) return unavailable(symbol, "登録されていない分析対象です。");
+  const interval = normalizeTimeframe(options.interval);
 
   const { candles, source, warning } = await getCandles({
     symbol: asset.symbol,
-    provider: options.provider || "demo"
+    provider: options.provider || "demo",
+    interval
   });
   const dataQuality = assessDataQuality(candles, source);
 
@@ -277,8 +323,11 @@ export async function analyzeSymbol(symbol, options = {}) {
     asset,
     symbol: asset.symbol,
     source,
-    candles: candles.slice(-120),
+    interval,
+    timeframe: TIMEFRAMES[interval],
+    candles: candles.slice(-180),
     signal,
+    analysisMaterials: buildAnalysisMaterials(features, tournament, regime, dataQuality, costs, interval),
     features: {
       close: round(features.close, 4),
       sma20: round(features.sma20, 4),

@@ -3,6 +3,7 @@ import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { analyzeSymbol, listAssets } from "./analyzer.js";
 import { getCandles } from "./dataProvider.js";
+import { normalizeTimeframe } from "./dataProvider.js";
 import { round } from "./indicators.js";
 
 const rootDir = fileURLToPath(new URL("..", import.meta.url));
@@ -37,20 +38,21 @@ async function appendJsonl(path, rows) {
 }
 
 function signalKey(record) {
-  return `${record.date}|${record.provider}|${record.symbol}`;
+  return `${record.date}|${record.provider}|${record.interval}|${record.symbol}`;
 }
 
 function outcomeKey(signal, horizon) {
   return `${signal.id}|${horizon}`;
 }
 
-function buildSignalRecord(result, provider, date) {
+function buildSignalRecord(result, provider, date, interval) {
   const signal = result.signal;
   return {
-    id: `${date}-${provider}-${result.symbol}`,
+    id: `${date}-${provider}-${interval}-${result.symbol}`,
     date,
     generatedAt: result.generatedAt,
     provider,
+    interval,
     symbol: result.symbol,
     assetName: result.asset.name,
     group: result.asset.group,
@@ -67,6 +69,16 @@ function buildSignalRecord(result, provider, date) {
     dataQualityScore: signal.dataQuality.score,
     costBps: signal.costs.totalBps,
     voteWeights: signal.voteWeights,
+    modelScores: result.tournament.map((entry) => ({
+      name: entry.name,
+      direction: entry.direction,
+      confidence: entry.confidence,
+      winRate: entry.winRate,
+      profitFactor: entry.profitFactor,
+      netReturn: entry.netReturn,
+      maxDrawdown: entry.maxDrawdown,
+      score: entry.score
+    })),
     firstReason: signal.reasons[0],
     status: "pending"
   };
@@ -110,6 +122,7 @@ function evaluateSignal(signal, candles, horizon) {
     date: isoDateJst(),
     symbol: signal.symbol,
     provider: signal.provider,
+    interval: signal.interval,
     horizon,
     direction: signal.direction,
     confidence: signal.confidence,
@@ -170,11 +183,12 @@ function calibrationBuckets(outcomes, signals) {
   }));
 }
 
-function buildSummary(signals, outcomes, created, evaluated, provider) {
+function buildSummary(signals, outcomes, created, evaluated, provider, intervals) {
   const pending = signals.length * horizons.length - outcomes.length;
   return {
     generatedAt: new Date().toISOString(),
     provider,
+    intervals,
     totals: {
       signals: signals.length,
       newSignals: created.length,
@@ -184,6 +198,7 @@ function buildSummary(signals, outcomes, created, evaluated, provider) {
     },
     byModel: summarizeGroup(outcomes, "leadModel"),
     byRegime: summarizeGroup(outcomes, "regime"),
+    byTimeframe: summarizeGroup(outcomes, "interval"),
     bySymbol: summarizeGroup(outcomes, "symbol"),
     calibration: calibrationBuckets(outcomes, signals),
     nextActions: [
@@ -196,6 +211,7 @@ function buildSummary(signals, outcomes, created, evaluated, provider) {
 
 function summaryMarkdown(summary) {
   const topModel = summary.byModel[0];
+  const topTimeframe = summary.byTimeframe?.[0];
   return [
     "# Market AI Learning Summary",
     "",
@@ -205,6 +221,7 @@ function summaryMarkdown(summary) {
     "## 理由",
     `累計シグナルは${summary.totals.signals}件、累計答え合わせは${summary.totals.outcomes}件、未評価は${summary.totals.pendingOutcomes}件です。`,
     topModel ? `現時点で記録数が最も多いモデルは${topModel.name}で、${topModel.count}件です。` : "まだ答え合わせ済みのモデル成績はありません。",
+    topTimeframe ? `現時点で記録数が最も多い時間足は${topTimeframe.name}で、${topTimeframe.count}件です。` : "まだ時間足別の答え合わせはありません。",
     "",
     "## 次のアクション",
     ...summary.nextActions.map((item, index) => `${index + 1}. ${item}`),
@@ -214,6 +231,7 @@ function summaryMarkdown(summary) {
 
 export async function runDailyLearning(options = {}) {
   const provider = options.provider || "demo";
+  const intervals = (options.intervals?.length ? options.intervals : ["1d"]).map(normalizeTimeframe);
   const learningDir = options.learningDir || defaultLearningDir;
   const date = options.date || isoDateJst();
   const signalsPath = join(learningDir, "signals.jsonl");
@@ -226,13 +244,15 @@ export async function runDailyLearning(options = {}) {
   const existingKeys = new Set(existingSignals.map(signalKey));
   const created = [];
 
-  for (const asset of listAssets()) {
-    const result = await analyzeSymbol(asset.symbol, { provider });
-    if (!result.ok) continue;
-    const record = buildSignalRecord(result, provider, date);
-    if (!existingKeys.has(signalKey(record))) {
-      created.push(record);
-      existingKeys.add(signalKey(record));
+  for (const interval of intervals) {
+    for (const asset of listAssets()) {
+      const result = await analyzeSymbol(asset.symbol, { provider, interval });
+      if (!result.ok) continue;
+      const record = buildSignalRecord(result, provider, date, interval);
+      if (!existingKeys.has(signalKey(record))) {
+        created.push(record);
+        existingKeys.add(signalKey(record));
+      }
     }
   }
 
@@ -244,10 +264,12 @@ export async function runDailyLearning(options = {}) {
   const candlesBySymbol = new Map();
 
   for (const signal of allSignals) {
-    if (!candlesBySymbol.has(signal.symbol)) {
-      candlesBySymbol.set(signal.symbol, await getCandles({ symbol: signal.symbol, provider: signal.provider }));
+    const interval = normalizeTimeframe(signal.interval || "1d");
+    const candleKey = `${signal.symbol}|${signal.provider}|${interval}`;
+    if (!candlesBySymbol.has(candleKey)) {
+      candlesBySymbol.set(candleKey, await getCandles({ symbol: signal.symbol, provider: signal.provider, interval }));
     }
-    const { candles } = candlesBySymbol.get(signal.symbol);
+    const { candles } = candlesBySymbol.get(candleKey);
     for (const horizon of horizons) {
       const key = outcomeKey(signal, horizon);
       if (existingOutcomeKeys.has(key)) continue;
@@ -261,7 +283,7 @@ export async function runDailyLearning(options = {}) {
 
   await appendJsonl(outcomesPath, evaluated);
   const allOutcomes = [...existingOutcomes, ...evaluated];
-  const summary = buildSummary(allSignals, allOutcomes, created, evaluated, provider);
+  const summary = buildSummary(allSignals, allOutcomes, created, evaluated, provider, intervals);
   await writeFile(summaryPath, JSON.stringify(summary, null, 2), "utf8");
   await writeFile(summaryMdPath, summaryMarkdown(summary), "utf8");
   return summary;
@@ -276,8 +298,10 @@ export async function readLearningSummary(options = {}) {
       return {
         generatedAt: null,
         totals: { signals: 0, newSignals: 0, outcomes: 0, newOutcomes: 0, pendingOutcomes: 0 },
+        intervals: [],
         byModel: [],
         byRegime: [],
+        byTimeframe: [],
         bySymbol: [],
         calibration: [],
         nextActions: ["日次学習を1回実行してください。"]

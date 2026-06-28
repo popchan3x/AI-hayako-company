@@ -1,169 +1,785 @@
 {
-  "generatedAt": "2026-06-28T06:32:46.012Z",
-  "provider": "demo",
+  "generatedAt": "2026-06-28T11:46:22.650Z",
+  "provider": "free-composite",
   "totals": {
-    "signals": 91,
-    "newSignals": 77,
-    "outcomes": 14,
-    "newOutcomes": 14,
-    "pendingOutcomes": 259
+    "signals": 167,
+    "newSignals": 76,
+    "outcomes": 273,
+    "newOutcomes": 0,
+    "pendingOutcomes": 228
   },
   "byModel": [
     {
       "name": "Volatility Squeeze",
-      "count": 12,
+      "count": 234,
       "wins": 0,
-      "netReturn": -0.4413,
+      "netReturn": -292.2617,
       "winRate": 0,
-      "averageNetReturn": -0.0368
-    },
-    {
-      "name": "Time Series Momentum",
-      "count": 1,
-      "wins": 0,
-      "netReturn": -0.0344,
-      "winRate": 0,
-      "averageNetReturn": -0.0344
+      "averageNetReturn": -1.249
     },
     {
       "name": "Indicator Composite",
-      "count": 1,
+      "count": 24,
+      "wins": 3,
+      "netReturn": -31.5675,
+      "winRate": 12.5,
+      "averageNetReturn": -1.3153
+    },
+    {
+      "name": "Time Series Momentum",
+      "count": 15,
       "wins": 0,
-      "netReturn": -0.0461,
+      "netReturn": -20.569,
       "winRate": 0,
-      "averageNetReturn": -0.0461
+      "averageNetReturn": -1.3713
     }
   ],
   "byRegime": [
     {
       "name": "下降トレンド",
-      "count": 13,
-      "wins": 0,
-      "netReturn": -0.4995,
-      "winRate": 0,
-      "averageNetReturn": -0.0384
+      "count": 270,
+      "wins": 3,
+      "netReturn": -342.8818,
+      "winRate": 1.1,
+      "averageNetReturn": -1.2699
     },
     {
       "name": "中立",
-      "count": 1,
+      "count": 3,
       "wins": 0,
-      "netReturn": -0.0223,
+      "netReturn": -1.5164,
       "winRate": 0,
-      "averageNetReturn": -0.0223
+      "averageNetReturn": -0.5055
     }
   ],
   "bySymbol": [
     {
+      "name": "SOXX",
+      "count": 3,
+      "wins": 3,
+      "netReturn": 0,
+      "winRate": 100,
+      "averageNetReturn": 0
+    },
+    {
       "name": "SPY",
-      "count": 1,
+      "count": 3,
       "wins": 0,
-      "netReturn": -0.0344,
+      "netReturn": -3.3094,
       "winRate": 0,
-      "averageNetReturn": -0.0344
+      "averageNetReturn": -1.1031
     },
     {
       "name": "QQQ",
-      "count": 1,
+      "count": 3,
       "wins": 0,
-      "netReturn": -0.0334,
+      "netReturn": -3.4529,
       "winRate": 0,
-      "averageNetReturn": -0.0334
+      "averageNetReturn": -1.151
     },
     {
       "name": "DIA",
-      "count": 1,
+      "count": 3,
       "wins": 0,
-      "netReturn": -0.0461,
+      "netReturn": -3.4596,
       "winRate": 0,
-      "averageNetReturn": -0.0461
+      "averageNetReturn": -1.1532
     },
     {
       "name": "IWM",
-      "count": 1,
+      "count": 3,
       "wins": 0,
-      "netReturn": -0.0347,
+      "netReturn": -3.3053,
       "winRate": 0,
-      "averageNetReturn": -0.0347
+      "averageNetReturn": -1.1018
     },
     {
       "name": "NVDA",
-      "count": 1,
+      "count": 3,
       "wins": 0,
-      "netReturn": -0.0477,
+      "netReturn": -3.9466,
       "winRate": 0,
-      "averageNetReturn": -0.0477
+      "averageNetReturn": -1.3155
     },
     {
       "name": "AAPL",
-      "count": 1,
+      "count": 3,
       "wins": 0,
-      "netReturn": -0.036,
+      "netReturn": -3.3003,
       "winRate": 0,
-      "averageNetReturn": -0.036
+      "averageNetReturn": -1.1001
     },
     {
       "name": "MSFT",
-      "count": 1,
+      "count": 3,
       "wins": 0,
-      "netReturn": -0.0454,
+      "netReturn": -3.0623,
       "winRate": 0,
-      "averageNetReturn": -0.0454
+      "averageNetReturn": -1.0208
     },
     {
       "name": "EURUSD",
-      "count": 1,
+      "count": 3,
       "wins": 0,
-      "netReturn": -0.0218,
+      "netReturn": -2.6129,
       "winRate": 0,
-      "averageNetReturn": -0.0218
+      "averageNetReturn": -0.871
     },
     {
       "name": "USDJPY",
-      "count": 1,
+      "count": 3,
       "wins": 0,
-      "netReturn": -0.0194,
+      "netReturn": -2.1354,
       "winRate": 0,
-      "averageNetReturn": -0.0194
+      "averageNetReturn": -0.7118
     },
     {
       "name": "GBPUSD",
-      "count": 1,
+      "count": 3,
       "wins": 0,
-      "netReturn": -0.0223,
+      "netReturn": -1.5164,
       "winRate": 0,
-      "averageNetReturn": -0.0223
+      "averageNetReturn": -0.5055
     },
     {
       "name": "AUDUSD",
-      "count": 1,
+      "count": 3,
       "wins": 0,
-      "netReturn": -0.0224,
+      "netReturn": -2.0815,
       "winRate": 0,
-      "averageNetReturn": -0.0224
+      "averageNetReturn": -0.6938
     },
     {
       "name": "XAUUSD",
-      "count": 1,
+      "count": 3,
       "wins": 0,
-      "netReturn": -0.0529,
+      "netReturn": -4.6759,
       "winRate": 0,
-      "averageNetReturn": -0.0529
+      "averageNetReturn": -1.5586
     },
     {
       "name": "XAGUSD",
-      "count": 1,
+      "count": 3,
       "wins": 0,
-      "netReturn": -0.0519,
+      "netReturn": -5.1106,
       "winRate": 0,
-      "averageNetReturn": -0.0519
+      "averageNetReturn": -1.7035
     },
     {
       "name": "XPTUSD",
-      "count": 1,
+      "count": 3,
       "wins": 0,
-      "netReturn": -0.0534,
+      "netReturn": -4.5067,
       "winRate": 0,
-      "averageNetReturn": -0.0534
+      "averageNetReturn": -1.5022
+    },
+    {
+      "name": "VTI",
+      "count": 3,
+      "wins": 0,
+      "netReturn": -3.8931,
+      "winRate": 0,
+      "averageNetReturn": -1.2977
+    },
+    {
+      "name": "RSP",
+      "count": 3,
+      "wins": 0,
+      "netReturn": -4.2478,
+      "winRate": 0,
+      "averageNetReturn": -1.4159
+    },
+    {
+      "name": "SMH",
+      "count": 3,
+      "wins": 0,
+      "netReturn": -3.5535,
+      "winRate": 0,
+      "averageNetReturn": -1.1845
+    },
+    {
+      "name": "TLT",
+      "count": 3,
+      "wins": 0,
+      "netReturn": -4.1659,
+      "winRate": 0,
+      "averageNetReturn": -1.3886
+    },
+    {
+      "name": "HYG",
+      "count": 3,
+      "wins": 0,
+      "netReturn": -4.4741,
+      "winRate": 0,
+      "averageNetReturn": -1.4914
+    },
+    {
+      "name": "VIXY",
+      "count": 3,
+      "wins": 0,
+      "netReturn": -3.2276,
+      "winRate": 0,
+      "averageNetReturn": -1.0759
+    },
+    {
+      "name": "EWJ",
+      "count": 3,
+      "wins": 0,
+      "netReturn": -3.9035,
+      "winRate": 0,
+      "averageNetReturn": -1.3012
+    },
+    {
+      "name": "DXJ",
+      "count": 3,
+      "wins": 0,
+      "netReturn": -4.0511,
+      "winRate": 0,
+      "averageNetReturn": -1.3504
+    },
+    {
+      "name": "1321JP",
+      "count": 3,
+      "wins": 0,
+      "netReturn": -4.6844,
+      "winRate": 0,
+      "averageNetReturn": -1.5615
+    },
+    {
+      "name": "1306JP",
+      "count": 3,
+      "wins": 0,
+      "netReturn": -3.9985,
+      "winRate": 0,
+      "averageNetReturn": -1.3328
+    },
+    {
+      "name": "AMZN",
+      "count": 3,
+      "wins": 0,
+      "netReturn": -3.4404,
+      "winRate": 0,
+      "averageNetReturn": -1.1468
+    },
+    {
+      "name": "GOOGL",
+      "count": 3,
+      "wins": 0,
+      "netReturn": -4.8101,
+      "winRate": 0,
+      "averageNetReturn": -1.6034
+    },
+    {
+      "name": "META",
+      "count": 3,
+      "wins": 0,
+      "netReturn": -4.0168,
+      "winRate": 0,
+      "averageNetReturn": -1.3389
+    },
+    {
+      "name": "TSLA",
+      "count": 3,
+      "wins": 0,
+      "netReturn": -4.0215,
+      "winRate": 0,
+      "averageNetReturn": -1.3405
+    },
+    {
+      "name": "AVGO",
+      "count": 3,
+      "wins": 0,
+      "netReturn": -3.0323,
+      "winRate": 0,
+      "averageNetReturn": -1.0108
+    },
+    {
+      "name": "AMD",
+      "count": 3,
+      "wins": 0,
+      "netReturn": -4.7362,
+      "winRate": 0,
+      "averageNetReturn": -1.5787
+    },
+    {
+      "name": "TSM",
+      "count": 3,
+      "wins": 0,
+      "netReturn": -3.3535,
+      "winRate": 0,
+      "averageNetReturn": -1.1178
+    },
+    {
+      "name": "ASML",
+      "count": 3,
+      "wins": 0,
+      "netReturn": -5.329,
+      "winRate": 0,
+      "averageNetReturn": -1.7763
+    },
+    {
+      "name": "ORCL",
+      "count": 3,
+      "wins": 0,
+      "netReturn": -5.8892,
+      "winRate": 0,
+      "averageNetReturn": -1.9631
+    },
+    {
+      "name": "PLTR",
+      "count": 3,
+      "wins": 0,
+      "netReturn": -4.6293,
+      "winRate": 0,
+      "averageNetReturn": -1.5431
+    },
+    {
+      "name": "JPM",
+      "count": 3,
+      "wins": 0,
+      "netReturn": -3.8723,
+      "winRate": 0,
+      "averageNetReturn": -1.2908
+    },
+    {
+      "name": "BAC",
+      "count": 3,
+      "wins": 0,
+      "netReturn": -3.6226,
+      "winRate": 0,
+      "averageNetReturn": -1.2075
+    },
+    {
+      "name": "XOM",
+      "count": 3,
+      "wins": 0,
+      "netReturn": -4.374,
+      "winRate": 0,
+      "averageNetReturn": -1.458
+    },
+    {
+      "name": "CVX",
+      "count": 3,
+      "wins": 0,
+      "netReturn": -3.9866,
+      "winRate": 0,
+      "averageNetReturn": -1.3289
+    },
+    {
+      "name": "LLY",
+      "count": 3,
+      "wins": 0,
+      "netReturn": -4.7072,
+      "winRate": 0,
+      "averageNetReturn": -1.5691
+    },
+    {
+      "name": "UNH",
+      "count": 3,
+      "wins": 0,
+      "netReturn": -4.2365,
+      "winRate": 0,
+      "averageNetReturn": -1.4122
+    },
+    {
+      "name": "COST",
+      "count": 3,
+      "wins": 0,
+      "netReturn": -4.0033,
+      "winRate": 0,
+      "averageNetReturn": -1.3344
+    },
+    {
+      "name": "7203JP",
+      "count": 3,
+      "wins": 0,
+      "netReturn": -4.9522,
+      "winRate": 0,
+      "averageNetReturn": -1.6507
+    },
+    {
+      "name": "6758JP",
+      "count": 3,
+      "wins": 0,
+      "netReturn": -4.7496,
+      "winRate": 0,
+      "averageNetReturn": -1.5832
+    },
+    {
+      "name": "8035JP",
+      "count": 3,
+      "wins": 0,
+      "netReturn": -5.6156,
+      "winRate": 0,
+      "averageNetReturn": -1.8719
+    },
+    {
+      "name": "6857JP",
+      "count": 3,
+      "wins": 0,
+      "netReturn": -3.754,
+      "winRate": 0,
+      "averageNetReturn": -1.2513
+    },
+    {
+      "name": "6861JP",
+      "count": 3,
+      "wins": 0,
+      "netReturn": -3.7688,
+      "winRate": 0,
+      "averageNetReturn": -1.2563
+    },
+    {
+      "name": "9984JP",
+      "count": 3,
+      "wins": 0,
+      "netReturn": -4.2637,
+      "winRate": 0,
+      "averageNetReturn": -1.4212
+    },
+    {
+      "name": "9983JP",
+      "count": 3,
+      "wins": 0,
+      "netReturn": -3.9893,
+      "winRate": 0,
+      "averageNetReturn": -1.3298
+    },
+    {
+      "name": "7974JP",
+      "count": 3,
+      "wins": 0,
+      "netReturn": -3.6368,
+      "winRate": 0,
+      "averageNetReturn": -1.2123
+    },
+    {
+      "name": "6501JP",
+      "count": 3,
+      "wins": 0,
+      "netReturn": -4.2728,
+      "winRate": 0,
+      "averageNetReturn": -1.4243
+    },
+    {
+      "name": "7011JP",
+      "count": 3,
+      "wins": 0,
+      "netReturn": -3.7902,
+      "winRate": 0,
+      "averageNetReturn": -1.2634
+    },
+    {
+      "name": "8306JP",
+      "count": 3,
+      "wins": 0,
+      "netReturn": -3.7825,
+      "winRate": 0,
+      "averageNetReturn": -1.2608
+    },
+    {
+      "name": "8316JP",
+      "count": 3,
+      "wins": 0,
+      "netReturn": -3.8607,
+      "winRate": 0,
+      "averageNetReturn": -1.2869
+    },
+    {
+      "name": "6098JP",
+      "count": 3,
+      "wins": 0,
+      "netReturn": -4.2051,
+      "winRate": 0,
+      "averageNetReturn": -1.4017
+    },
+    {
+      "name": "9432JP",
+      "count": 3,
+      "wins": 0,
+      "netReturn": -3.5803,
+      "winRate": 0,
+      "averageNetReturn": -1.1934
+    },
+    {
+      "name": "7267JP",
+      "count": 3,
+      "wins": 0,
+      "netReturn": -4.1417,
+      "winRate": 0,
+      "averageNetReturn": -1.3806
+    },
+    {
+      "name": "8058JP",
+      "count": 3,
+      "wins": 0,
+      "netReturn": -4.1315,
+      "winRate": 0,
+      "averageNetReturn": -1.3772
+    },
+    {
+      "name": "8031JP",
+      "count": 3,
+      "wins": 0,
+      "netReturn": -4.5808,
+      "winRate": 0,
+      "averageNetReturn": -1.5269
+    },
+    {
+      "name": "6146JP",
+      "count": 3,
+      "wins": 0,
+      "netReturn": -3.5078,
+      "winRate": 0,
+      "averageNetReturn": -1.1693
+    },
+    {
+      "name": "6920JP",
+      "count": 3,
+      "wins": 0,
+      "netReturn": -4.0953,
+      "winRate": 0,
+      "averageNetReturn": -1.3651
+    },
+    {
+      "name": "4063JP",
+      "count": 3,
+      "wins": 0,
+      "netReturn": -4.1206,
+      "winRate": 0,
+      "averageNetReturn": -1.3735
+    },
+    {
+      "name": "USDCAD",
+      "count": 3,
+      "wins": 0,
+      "netReturn": -2.3052,
+      "winRate": 0,
+      "averageNetReturn": -0.7684
+    },
+    {
+      "name": "USDCHF",
+      "count": 3,
+      "wins": 0,
+      "netReturn": -2.8684,
+      "winRate": 0,
+      "averageNetReturn": -0.9561
+    },
+    {
+      "name": "EURJPY",
+      "count": 3,
+      "wins": 0,
+      "netReturn": -3.5175,
+      "winRate": 0,
+      "averageNetReturn": -1.1725
+    },
+    {
+      "name": "EURGBP",
+      "count": 3,
+      "wins": 0,
+      "netReturn": -3.0392,
+      "winRate": 0,
+      "averageNetReturn": -1.0131
+    },
+    {
+      "name": "EURAUD",
+      "count": 3,
+      "wins": 0,
+      "netReturn": -2.9255,
+      "winRate": 0,
+      "averageNetReturn": -0.9752
+    },
+    {
+      "name": "EURCAD",
+      "count": 3,
+      "wins": 0,
+      "netReturn": -2.3461,
+      "winRate": 0,
+      "averageNetReturn": -0.782
+    },
+    {
+      "name": "EURCHF",
+      "count": 3,
+      "wins": 0,
+      "netReturn": -3.275,
+      "winRate": 0,
+      "averageNetReturn": -1.0917
+    },
+    {
+      "name": "GBPJPY",
+      "count": 3,
+      "wins": 0,
+      "netReturn": -2.9042,
+      "winRate": 0,
+      "averageNetReturn": -0.9681
+    },
+    {
+      "name": "GBPAUD",
+      "count": 3,
+      "wins": 0,
+      "netReturn": -2.788,
+      "winRate": 0,
+      "averageNetReturn": -0.9293
+    },
+    {
+      "name": "GBPCAD",
+      "count": 3,
+      "wins": 0,
+      "netReturn": -2.6914,
+      "winRate": 0,
+      "averageNetReturn": -0.8971
+    },
+    {
+      "name": "GBPCHF",
+      "count": 3,
+      "wins": 0,
+      "netReturn": -2.8547,
+      "winRate": 0,
+      "averageNetReturn": -0.9516
+    },
+    {
+      "name": "AUDJPY",
+      "count": 3,
+      "wins": 0,
+      "netReturn": -2.5446,
+      "winRate": 0,
+      "averageNetReturn": -0.8482
+    },
+    {
+      "name": "AUDCAD",
+      "count": 3,
+      "wins": 0,
+      "netReturn": -2.3386,
+      "winRate": 0,
+      "averageNetReturn": -0.7795
+    },
+    {
+      "name": "AUDCHF",
+      "count": 3,
+      "wins": 0,
+      "netReturn": -2.3727,
+      "winRate": 0,
+      "averageNetReturn": -0.7909
+    },
+    {
+      "name": "CADJPY",
+      "count": 3,
+      "wins": 0,
+      "netReturn": -2.0194,
+      "winRate": 0,
+      "averageNetReturn": -0.6731
+    },
+    {
+      "name": "CADCHF",
+      "count": 3,
+      "wins": 0,
+      "netReturn": -2.5657,
+      "winRate": 0,
+      "averageNetReturn": -0.8552
+    },
+    {
+      "name": "CHFJPY",
+      "count": 3,
+      "wins": 0,
+      "netReturn": -2.4179,
+      "winRate": 0,
+      "averageNetReturn": -0.806
+    },
+    {
+      "name": "XPDUSD",
+      "count": 3,
+      "wins": 0,
+      "netReturn": -6.2266,
+      "winRate": 0,
+      "averageNetReturn": -2.0755
+    },
+    {
+      "name": "GLD",
+      "count": 3,
+      "wins": 0,
+      "netReturn": -4.6421,
+      "winRate": 0,
+      "averageNetReturn": -1.5474
+    },
+    {
+      "name": "SLV",
+      "count": 3,
+      "wins": 0,
+      "netReturn": -3.5198,
+      "winRate": 0,
+      "averageNetReturn": -1.1733
+    },
+    {
+      "name": "PPLT",
+      "count": 3,
+      "wins": 0,
+      "netReturn": -5.3574,
+      "winRate": 0,
+      "averageNetReturn": -1.7858
+    },
+    {
+      "name": "PALL",
+      "count": 3,
+      "wins": 0,
+      "netReturn": -3.7604,
+      "winRate": 0,
+      "averageNetReturn": -1.2535
+    },
+    {
+      "name": "GDX",
+      "count": 3,
+      "wins": 0,
+      "netReturn": -4.5852,
+      "winRate": 0,
+      "averageNetReturn": -1.5284
+    },
+    {
+      "name": "GDXJ",
+      "count": 3,
+      "wins": 0,
+      "netReturn": -5.8504,
+      "winRate": 0,
+      "averageNetReturn": -1.9501
+    },
+    {
+      "name": "NEM",
+      "count": 3,
+      "wins": 0,
+      "netReturn": -5.4668,
+      "winRate": 0,
+      "averageNetReturn": -1.8223
+    },
+    {
+      "name": "GOLD",
+      "count": 3,
+      "wins": 0,
+      "netReturn": -4.0872,
+      "winRate": 0,
+      "averageNetReturn": -1.3624
+    },
+    {
+      "name": "AEM",
+      "count": 3,
+      "wins": 0,
+      "netReturn": -4.4475,
+      "winRate": 0,
+      "averageNetReturn": -1.4825
+    },
+    {
+      "name": "PAAS",
+      "count": 3,
+      "wins": 0,
+      "netReturn": -4.1482,
+      "winRate": 0,
+      "averageNetReturn": -1.3827
+    },
+    {
+      "name": "WPM",
+      "count": 3,
+      "wins": 0,
+      "netReturn": -4.9971,
+      "winRate": 0,
+      "averageNetReturn": -1.6657
     }
   ],
   "calibration": [
@@ -179,13 +795,13 @@
     },
     {
       "name": "70-79",
-      "count": 7,
+      "count": 93,
       "winRate": 0
     },
     {
       "name": "80-89",
-      "count": 7,
-      "winRate": 0
+      "count": 180,
+      "winRate": 1.7
     },
     {
       "name": "90-100",

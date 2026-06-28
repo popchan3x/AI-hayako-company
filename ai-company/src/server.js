@@ -4,9 +4,11 @@ import { extname, join, normalize } from "node:path";
 import { fileURLToPath } from "node:url";
 import { analyzeSymbol, listAssets, researchRoadmap } from "./analyzer.js";
 import { readLearningSummary, runDailyLearning } from "./learning.js";
+import { startAutoLearningScheduler } from "./learningScheduler.js";
 
 const rootDir = join(fileURLToPath(new URL("..", import.meta.url)), "public");
 const port = Number(process.env.PORT || 3000);
+const learningScheduler = startAutoLearningScheduler();
 
 const contentTypes = {
   ".html": "text/html; charset=utf-8",
@@ -34,7 +36,10 @@ async function serveStatic(request, response) {
   const filePath = join(rootDir, safePath);
   try {
     const content = await readFile(filePath);
-    response.writeHead(200, { "Content-Type": contentTypes[extname(filePath)] || "application/octet-stream" });
+    response.writeHead(200, {
+      "Content-Type": contentTypes[extname(filePath)] || "application/octet-stream",
+      "Cache-Control": "no-store"
+    });
     response.end(content);
   } catch {
     sendJson(response, 404, { ok: false, error: "Not found" });
@@ -55,23 +60,30 @@ async function handleApi(request, response) {
     sendJson(response, 200, { ok: true, summary: await readLearningSummary() });
     return;
   }
+  if (request.method === "GET" && url.pathname === "/api/learn/scheduler") {
+    sendJson(response, 200, { ok: true, scheduler: learningScheduler.state });
+    return;
+  }
   if (request.method === "POST" && url.pathname === "/api/learn/daily") {
     const body = await readBody(request);
     const provider = body.provider || url.searchParams.get("provider") || "demo";
-    sendJson(response, 200, { ok: true, summary: await runDailyLearning({ provider }) });
+    const interval = body.interval || url.searchParams.get("interval") || "1d";
+    sendJson(response, 200, { ok: true, summary: await runDailyLearning({ provider, intervals: [interval] }) });
     return;
   }
   if (request.method === "GET" && url.pathname === "/api/analyze") {
     const symbol = url.searchParams.get("symbol") || "XAUUSD";
     const provider = url.searchParams.get("provider") || "demo";
-    sendJson(response, 200, await analyzeSymbol(symbol, { provider }));
+    const interval = url.searchParams.get("interval") || "1d";
+    sendJson(response, 200, await analyzeSymbol(symbol, { provider, interval }));
     return;
   }
   if (request.method === "GET" && url.pathname === "/api/scan") {
     const provider = url.searchParams.get("provider") || "demo";
+    const interval = url.searchParams.get("interval") || "1d";
     const rows = [];
     for (const asset of listAssets()) {
-      const result = await analyzeSymbol(asset.symbol, { provider });
+      const result = await analyzeSymbol(asset.symbol, { provider, interval });
       rows.push({
         symbol: asset.symbol,
         name: asset.name,
@@ -90,12 +102,12 @@ async function handleApi(request, response) {
       });
     }
     rows.sort((a, b) => b.confidence - a.confidence);
-    sendJson(response, 200, { ok: true, provider, rows });
+    sendJson(response, 200, { ok: true, provider, interval, rows });
     return;
   }
   if (request.method === "POST" && url.pathname === "/api/analyze") {
     const body = await readBody(request);
-    sendJson(response, 200, await analyzeSymbol(body.symbol || "XAUUSD", { provider: body.provider || "demo" }));
+    sendJson(response, 200, await analyzeSymbol(body.symbol || "XAUUSD", { provider: body.provider || "demo", interval: body.interval || "1d" }));
     return;
   }
   if (request.method === "GET" && url.pathname === "/health") {

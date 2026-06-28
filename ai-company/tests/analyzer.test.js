@@ -100,6 +100,40 @@ test("free data providers map symbols and parse yahoo chart payload", async () =
   assert.equal(result.candles[1].close, 102);
 });
 
+test("yahoo provider supports intraday timeframes and aggregates 4 hour candles", async () => {
+  const timestamps = Array.from({ length: 8 }, (_, index) => 1767225600 + index * 3600);
+  const yahooPayload = {
+    chart: {
+      result: [{
+        timestamp: timestamps,
+        indicators: {
+          quote: [{
+            open: [100, 101, 102, 103, 104, 105, 106, 107],
+            high: [101, 102, 103, 104, 105, 106, 107, 108],
+            low: [99, 100, 101, 102, 103, 104, 105, 106],
+            close: [101, 102, 103, 104, 105, 106, 107, 108],
+            volume: [10, 20, 30, 40, 50, 60, 70, 80]
+          }]
+        }
+      }],
+      error: null
+    }
+  };
+  let requestedUrl = "";
+  const fetchImpl = async (url) => {
+    requestedUrl = String(url);
+    return new Response(JSON.stringify(yahooPayload), { status: 200 });
+  };
+  const result = await fetchYahooCandles("SPY", { fetchImpl, interval: "4h" });
+  assert.match(requestedUrl, /interval=60m/);
+  assert.match(requestedUrl, /range=6mo/);
+  assert.equal(result.interval, "4h");
+  assert.equal(result.candles.length, 2);
+  assert.equal(result.candles[0].open, 100);
+  assert.equal(result.candles[0].close, 104);
+  assert.equal(result.candles[0].volume, 100);
+});
+
 test("composite free provider falls back from stooq to yahoo", async () => {
   const yahooPayload = {
     chart: {
@@ -128,6 +162,34 @@ test("composite free provider falls back from stooq to yahoo", async () => {
   assert.equal(result.candles.length, 1);
 });
 
+test("yahoo provider can recover from node certificate failures with trusted fallback", async () => {
+  const yahooPayload = {
+    chart: {
+      result: [{
+        timestamp: [1767225600],
+        indicators: {
+          quote: [{
+            open: [100],
+            high: [102],
+            low: [99],
+            close: [101],
+            volume: [900]
+          }]
+        }
+      }],
+      error: null
+    }
+  };
+  const error = new TypeError("fetch failed");
+  error.cause = { code: "UNABLE_TO_VERIFY_LEAF_SIGNATURE", message: "unable to verify the first certificate" };
+  const result = await fetchYahooCandles("SPY", {
+    fetchImpl: async () => { throw error; },
+    fallbackFetchText: async () => JSON.stringify(yahooPayload)
+  });
+  assert.equal(result.candles.length, 1);
+  assert.match(result.warning, /test-fallback/);
+});
+
 test("backtest produces finite walk-forward metrics", () => {
   const candles = generateDemoCandles("XAUUSD", 180);
   const metrics = backtestCandidate(candles, trendBreakoutCandidate);
@@ -147,6 +209,16 @@ test("model tournament ranks candidates with regime adjustment", () => {
   assert.ok(tournament.length >= 5);
   assert.equal(Number.isFinite(tournament[0].adjustedScore), true);
   assert.equal(typeof tournament[0].regimeFit, "number");
+});
+
+test("analyzer returns timeframe and visible analysis materials", async () => {
+  const result = await analyzeSymbol("XAUUSD", { provider: "demo", interval: "5m" });
+  assert.equal(result.ok, true);
+  assert.equal(result.interval, "5m");
+  assert.equal(result.timeframe.label, "5分");
+  assert.ok(result.candles.length <= 180);
+  assert.ok(result.analysisMaterials.cards.length >= 8);
+  assert.ok(result.analysisMaterials.summary.length >= 3);
 });
 
 test("research roadmap keeps safe output rules", () => {
