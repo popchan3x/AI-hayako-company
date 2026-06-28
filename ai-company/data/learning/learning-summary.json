@@ -1,0 +1,46 @@
+{
+  "generatedAt": "2026-06-28T05:29:44.194Z",
+  "provider": "demo",
+  "totals": {
+    "signals": 14,
+    "newSignals": 14,
+    "outcomes": 0,
+    "newOutcomes": 0,
+    "pendingOutcomes": 42
+  },
+  "byModel": [],
+  "byRegime": [],
+  "bySymbol": [],
+  "calibration": [
+    {
+      "name": "0-59",
+      "count": 0,
+      "winRate": 0
+    },
+    {
+      "name": "60-69",
+      "count": 0,
+      "winRate": 0
+    },
+    {
+      "name": "70-79",
+      "count": 0,
+      "winRate": 0
+    },
+    {
+      "name": "80-89",
+      "count": 0,
+      "winRate": 0
+    },
+    {
+      "name": "90-100",
+      "count": 0,
+      "winRate": 0
+    }
+  ],
+  "nextActions": [
+    "明日も同じ時刻に全14対象のシグナルを保存する。",
+    "4本後、8本後、16本後の答え合わせを増やす。",
+    "30件以上たまったモデルから信頼度補正を強める。"
+  ]
+}

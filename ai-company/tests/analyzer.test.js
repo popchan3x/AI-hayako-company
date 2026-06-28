@@ -4,6 +4,10 @@ import { analyzeSymbol, listAssets, researchRoadmap } from "../src/analyzer.js";
 import { backtestCandidate, runModelTournament } from "../src/backtest.js";
 import { trendBreakoutCandidate } from "../src/candidates.js";
 import { generateDemoCandles } from "../src/dataProvider.js";
+import { runDailyLearning } from "../src/learning.js";
+import { mkdtemp } from "node:fs/promises";
+import { join } from "node:path";
+import { tmpdir } from "node:os";
 
 test("asset universe includes XAUUSD metals and excludes USB", () => {
   const symbols = listAssets().map((asset) => asset.symbol);
@@ -79,4 +83,15 @@ test("all demo assets can be analyzed for scan view", async () => {
   assert.equal(results.length, 14);
   assert.equal(results.every((result) => result.ok), true);
   assert.equal(results.every((result) => result.signal.dataQuality.score >= 90), true);
+});
+
+test("daily learning stores one signal per asset without duplicate same-day records", async () => {
+  const learningDir = await mkdtemp(join(tmpdir(), "market-ai-learning-"));
+  const first = await runDailyLearning({ provider: "demo", learningDir, date: "2026-06-28" });
+  const second = await runDailyLearning({ provider: "demo", learningDir, date: "2026-06-28" });
+  assert.equal(first.totals.newSignals, 14);
+  assert.equal(first.totals.signals, 14);
+  assert.equal(second.totals.newSignals, 0);
+  assert.equal(second.totals.signals, 14);
+  assert.ok(second.totals.pendingOutcomes >= 0);
 });

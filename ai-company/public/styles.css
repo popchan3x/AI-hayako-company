@@ -161,6 +161,10 @@ dl {
   margin: 0;
 }
 
+.learning-grid {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
 dt {
   color: var(--muted);
   font-size: 12px;
@@ -228,7 +232,8 @@ textarea {
 @media (max-width: 900px) {
   .layout,
   .signal-grid,
-  .columns {
+  .columns,
+  .learning-grid {
     grid-template-columns: 1fr;
   }
 

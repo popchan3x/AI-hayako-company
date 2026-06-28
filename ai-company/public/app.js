@@ -9,6 +9,7 @@ const elements = {
   providerSelect: document.querySelector("#providerSelect"),
   analyzeButton: document.querySelector("#analyzeButton"),
   scanButton: document.querySelector("#scanButton"),
+  learnButton: document.querySelector("#learnButton"),
   direction: document.querySelector("#direction"),
   confidence: document.querySelector("#confidence"),
   entryPrice: document.querySelector("#entryPrice"),
@@ -27,6 +28,11 @@ const elements = {
   riskSummary: document.querySelector("#riskSummary"),
   tournament: document.querySelector("#tournament"),
   scanTable: document.querySelector("#scanTable"),
+  learningSignals: document.querySelector("#learningSignals"),
+  learningOutcomes: document.querySelector("#learningOutcomes"),
+  learningPending: document.querySelector("#learningPending"),
+  learningNewSignals: document.querySelector("#learningNewSignals"),
+  learningActions: document.querySelector("#learningActions"),
   xDraft: document.querySelector("#xDraft"),
   chart: document.querySelector("#priceChart")
 };
@@ -97,6 +103,14 @@ function renderScan(rows) {
       <td>${escapeHtml(row.costBps)}bp</td>
     </tr>
   `).join("");
+}
+
+function renderLearning(summary) {
+  elements.learningSignals.textContent = summary.totals.signals;
+  elements.learningOutcomes.textContent = summary.totals.outcomes;
+  elements.learningPending.textContent = summary.totals.pendingOutcomes;
+  elements.learningNewSignals.textContent = summary.totals.newSignals;
+  listItems(elements.learningActions, summary.nextActions || []);
 }
 
 function renderAnalysis(analysis) {
@@ -204,6 +218,27 @@ async function scanAll() {
   }
 }
 
+async function loadLearningSummary() {
+  const payload = await requestJson("/api/learn/summary");
+  renderLearning(payload.summary);
+}
+
+async function runDailyLearning() {
+  elements.learnButton.disabled = true;
+  setStatus("日次学習中");
+  try {
+    const provider = elements.providerSelect.value;
+    const payload = await requestJson(`/api/learn/daily?provider=${provider}`, { method: "POST" });
+    renderLearning(payload.summary);
+    setStatus(`日次学習完了 ${payload.summary.totals.newSignals}件追加`);
+  } catch (error) {
+    setStatus("学習失敗");
+    elements.explanation.textContent = error.message;
+  } finally {
+    elements.learnButton.disabled = false;
+  }
+}
+
 async function analyze() {
   elements.analyzeButton.disabled = true;
   setStatus("分析中");
@@ -227,6 +262,8 @@ async function init() {
   renderAssets();
   elements.analyzeButton.addEventListener("click", analyze);
   elements.scanButton.addEventListener("click", scanAll);
+  elements.learnButton.addEventListener("click", runDailyLearning);
+  await loadLearningSummary();
   await analyze();
   await scanAll();
 }

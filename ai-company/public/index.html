@@ -28,6 +28,7 @@
 
         <button id="analyzeButton" type="button">分析</button>
         <button id="scanButton" type="button" class="secondary">全体スキャン</button>
+        <button id="learnButton" type="button" class="secondary">日次学習</button>
 
         <section class="panel compact">
           <h2>対象範囲</h2>
@@ -129,6 +130,17 @@
               <tbody id="scanTable"></tbody>
             </table>
           </div>
+        </section>
+
+        <section class="panel">
+          <h2>学習記録</h2>
+          <dl class="learning-grid">
+            <div><dt>累計シグナル</dt><dd id="learningSignals">0</dd></div>
+            <div><dt>答え合わせ</dt><dd id="learningOutcomes">0</dd></div>
+            <div><dt>未評価</dt><dd id="learningPending">0</dd></div>
+            <div><dt>本日追加</dt><dd id="learningNewSignals">0</dd></div>
+          </dl>
+          <ul id="learningActions"></ul>
         </section>
 
         <section class="panel">

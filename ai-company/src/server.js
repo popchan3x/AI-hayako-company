@@ -3,6 +3,7 @@ import { readFile } from "node:fs/promises";
 import { extname, join, normalize } from "node:path";
 import { fileURLToPath } from "node:url";
 import { analyzeSymbol, listAssets, researchRoadmap } from "./analyzer.js";
+import { readLearningSummary, runDailyLearning } from "./learning.js";
 
 const rootDir = join(fileURLToPath(new URL("..", import.meta.url)), "public");
 const port = Number(process.env.PORT || 3000);
@@ -48,6 +49,16 @@ async function handleApi(request, response) {
   }
   if (request.method === "GET" && url.pathname === "/api/research/roadmap") {
     sendJson(response, 200, { ok: true, roadmap: researchRoadmap() });
+    return;
+  }
+  if (request.method === "GET" && url.pathname === "/api/learn/summary") {
+    sendJson(response, 200, { ok: true, summary: await readLearningSummary() });
+    return;
+  }
+  if (request.method === "POST" && url.pathname === "/api/learn/daily") {
+    const body = await readBody(request);
+    const provider = body.provider || url.searchParams.get("provider") || "demo";
+    sendJson(response, 200, { ok: true, summary: await runDailyLearning({ provider }) });
     return;
   }
   if (request.method === "GET" && url.pathname === "/api/analyze") {
