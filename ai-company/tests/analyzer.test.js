@@ -9,14 +9,30 @@ import { mkdtemp } from "node:fs/promises";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
 
-test("asset universe includes XAUUSD metals and excludes USB", () => {
+test("asset universe includes expanded watchlist and excludes USB", () => {
   const symbols = listAssets().map((asset) => asset.symbol);
   const groups = listAssets().map((asset) => asset.group);
   assert.ok(symbols.includes("XAUUSD"));
   assert.ok(symbols.includes("XAGUSD"));
   assert.ok(symbols.includes("XPTUSD"));
+  assert.ok(symbols.includes("XPDUSD"));
+  assert.ok(symbols.includes("USDJPY"));
+  assert.ok(symbols.includes("USDCAD"));
+  assert.ok(symbols.includes("USDCHF"));
+  assert.ok(symbols.includes("EURCHF"));
+  assert.ok(symbols.includes("CHFJPY"));
+  assert.ok(symbols.includes("NVDA"));
+  assert.ok(symbols.includes("7203JP"));
+  assert.ok(symbols.includes("1321JP"));
+  assert.ok(symbols.includes("GDX"));
   assert.equal(symbols.includes("USB"), false);
+  assert.equal(new Set(symbols).size, symbols.length);
+  assert.equal(listAssets().filter((asset) => asset.group === "FX").length, 21);
   assert.ok(groups.includes("貴金属"));
+  assert.ok(groups.includes("貴金属ETF・鉱山株"));
+  assert.ok(groups.includes("日本株"));
+  assert.ok(groups.includes("指数ETF"));
+  assert.ok(listAssets().length >= 90);
 });
 
 test("analyzer returns priced validation signal with regime and meta model", async () => {
@@ -77,21 +93,23 @@ test("research roadmap keeps safe output rules", () => {
 });
 
 test("all demo assets can be analyzed for scan view", async () => {
+  const assets = listAssets();
   const results = await Promise.all(
-    listAssets().map((asset) => analyzeSymbol(asset.symbol, { provider: "demo" }))
+    assets.map((asset) => analyzeSymbol(asset.symbol, { provider: "demo" }))
   );
-  assert.equal(results.length, 14);
+  assert.equal(results.length, assets.length);
   assert.equal(results.every((result) => result.ok), true);
   assert.equal(results.every((result) => result.signal.dataQuality.score >= 90), true);
 });
 
 test("daily learning stores one signal per asset without duplicate same-day records", async () => {
   const learningDir = await mkdtemp(join(tmpdir(), "market-ai-learning-"));
+  const expected = listAssets().length;
   const first = await runDailyLearning({ provider: "demo", learningDir, date: "2026-06-28" });
   const second = await runDailyLearning({ provider: "demo", learningDir, date: "2026-06-28" });
-  assert.equal(first.totals.newSignals, 14);
-  assert.equal(first.totals.signals, 14);
+  assert.equal(first.totals.newSignals, expected);
+  assert.equal(first.totals.signals, expected);
   assert.equal(second.totals.newSignals, 0);
-  assert.equal(second.totals.signals, 14);
+  assert.equal(second.totals.signals, expected);
   assert.ok(second.totals.pendingOutcomes >= 0);
 });

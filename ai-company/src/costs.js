@@ -3,7 +3,10 @@ import { round } from "./indicators.js";
 const GROUP_COSTS = {
   FX: { spreadBps: 1.2, slippageBps: 0.8, feeBps: 0.2 },
   "貴金属": { spreadBps: 3.5, slippageBps: 1.5, feeBps: 0.3 },
-  "米国株・指数": { spreadBps: 2.0, slippageBps: 1.0, feeBps: 0.4 }
+  "貴金属ETF・鉱山株": { spreadBps: 2.8, slippageBps: 1.4, feeBps: 0.4 },
+  "指数ETF": { spreadBps: 1.8, slippageBps: 0.9, feeBps: 0.3 },
+  "米国株": { spreadBps: 2.2, slippageBps: 1.2, feeBps: 0.4 },
+  "日本株": { spreadBps: 3.0, slippageBps: 1.8, feeBps: 0.5 }
 };
 
 export function estimateTradingCosts(asset, features) {

@@ -187,7 +187,7 @@ function buildSummary(signals, outcomes, created, evaluated, provider) {
     bySymbol: summarizeGroup(outcomes, "symbol"),
     calibration: calibrationBuckets(outcomes, signals),
     nextActions: [
-      "明日も同じ時刻に全14対象のシグナルを保存する。",
+      "明日も同じ時刻に全対象のシグナルを保存する。",
       "4本後、8本後、16本後の答え合わせを増やす。",
       "30件以上たまったモデルから信頼度補正を強める。"
     ]
