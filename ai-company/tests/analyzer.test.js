@@ -26,11 +26,16 @@ test("analyzer returns priced validation signal with regime and meta model", asy
   assert.equal(typeof result.signal.selectedModel, "string");
   assert.equal(typeof result.signal.marketRegime.name, "string");
   assert.equal(typeof result.signal.modelAgreement, "number");
+  assert.equal(typeof result.signal.dataQuality.score, "number");
+  assert.equal(typeof result.signal.costs.totalBps, "number");
+  assert.equal(typeof result.signal.voteWeights.buy, "number");
+  assert.ok(result.signal.scenarios.length >= 3);
+  assert.ok(result.signal.riskSummary.length >= 4);
   assert.ok(result.signal.reasons.length >= 3);
   assert.ok(result.signal.reasons.length <= 5);
   assert.ok(result.signal.warnings.length >= 2);
   assert.match(result.signal.xDraft, /直接の売買推奨ではありません/);
-  assert.equal(JSON.stringify(result).includes("縺"), false);
+  assert.equal(JSON.stringify(result).includes(String.fromCodePoint(0x7e3a)), false);
 });
 
 test("unknown asset is not guessed", async () => {
@@ -47,13 +52,16 @@ test("backtest produces finite walk-forward metrics", () => {
   assert.equal(Number.isFinite(metrics.netReturn), true);
   assert.equal(Number.isFinite(metrics.maxDrawdown), true);
   assert.equal(Number.isFinite(metrics.averageReturn), true);
+  assert.equal(Number.isFinite(metrics.expectancy), true);
+  assert.equal(Number.isFinite(metrics.payoffRatio), true);
+  assert.equal(typeof metrics.maxLossStreak, "number");
   assert.ok(metrics.trades >= 0);
 });
 
 test("model tournament ranks candidates with regime adjustment", () => {
   const candles = generateDemoCandles("XAUUSD", 220);
   const tournament = runModelTournament(candles);
-  assert.ok(tournament.length >= 4);
+  assert.ok(tournament.length >= 5);
   assert.equal(Number.isFinite(tournament[0].adjustedScore), true);
   assert.equal(typeof tournament[0].regimeFit, "number");
 });
@@ -62,4 +70,13 @@ test("research roadmap keeps safe output rules", () => {
   const roadmap = researchRoadmap();
   assert.ok(roadmap.guardrails.some((item) => item.includes("未来データを使わない")));
   assert.ok(roadmap.guardrails.some((item) => item.includes("実売買とX投稿はユーザー")));
+});
+
+test("all demo assets can be analyzed for scan view", async () => {
+  const results = await Promise.all(
+    listAssets().map((asset) => analyzeSymbol(asset.symbol, { provider: "demo" }))
+  );
+  assert.equal(results.length, 14);
+  assert.equal(results.every((result) => result.ok), true);
+  assert.equal(results.every((result) => result.signal.dataQuality.score >= 90), true);
 });

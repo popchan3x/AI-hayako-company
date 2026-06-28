@@ -56,6 +56,30 @@ async function handleApi(request, response) {
     sendJson(response, 200, await analyzeSymbol(symbol, { provider }));
     return;
   }
+  if (request.method === "GET" && url.pathname === "/api/scan") {
+    const provider = url.searchParams.get("provider") || "demo";
+    const rows = [];
+    for (const asset of listAssets()) {
+      const result = await analyzeSymbol(asset.symbol, { provider });
+      rows.push({
+        symbol: asset.symbol,
+        name: asset.name,
+        group: asset.group,
+        ok: result.ok,
+        direction: result.signal?.direction ?? result.status,
+        confidence: result.signal?.confidence ?? 0,
+        regime: result.signal?.marketRegime?.name ?? "-",
+        model: result.signal?.leadModel ?? "-",
+        agreement: result.signal?.modelAgreement ?? 0,
+        quality: result.signal?.dataQuality?.score ?? result.dataQuality?.score ?? 0,
+        costBps: result.signal?.costs?.totalBps ?? 0,
+        reason: result.signal?.reasons?.[0] ?? result.reason
+      });
+    }
+    rows.sort((a, b) => b.confidence - a.confidence);
+    sendJson(response, 200, { ok: true, provider, rows });
+    return;
+  }
   if (request.method === "POST" && url.pathname === "/api/analyze") {
     const body = await readBody(request);
     sendJson(response, 200, await analyzeSymbol(body.symbol || "XAUUSD", { provider: body.provider || "demo" }));

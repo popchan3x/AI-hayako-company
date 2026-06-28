@@ -27,6 +27,7 @@
         </select>
 
         <button id="analyzeButton" type="button">分析</button>
+        <button id="scanButton" type="button" class="secondary">全体スキャン</button>
 
         <section class="panel compact">
           <h2>対象範囲</h2>
@@ -47,6 +48,9 @@
               <div><dt>相場環境</dt><dd id="regime">-</dd></div>
               <div><dt>選択モデル</dt><dd id="selectedModel">-</dd></div>
               <div><dt>一致度</dt><dd id="modelAgreement">-</dd></div>
+              <div><dt>データ品質</dt><dd id="dataQuality">-</dd></div>
+              <div><dt>売買コスト</dt><dd id="tradingCost">-</dd></div>
+              <div><dt>投票比率</dt><dd id="voteWeights">-</dd></div>
             </dl>
           </div>
 
@@ -71,6 +75,17 @@
           </div>
         </section>
 
+        <section class="columns">
+          <div class="panel">
+            <h2>シナリオ</h2>
+            <ul id="scenarios"></ul>
+          </div>
+          <div class="panel">
+            <h2>リスク概要</h2>
+            <ul id="riskSummary"></ul>
+          </div>
+        </section>
+
         <section class="panel">
           <h2>モデル大会</h2>
           <div class="table-wrap">
@@ -82,12 +97,36 @@
                   <th>信頼度</th>
                   <th>取引数</th>
                   <th>勝率</th>
+                  <th>期待値</th>
+                  <th>損益比</th>
                   <th>損益</th>
                   <th>最大下落</th>
+                  <th>連敗</th>
                   <th>点数</th>
                 </tr>
               </thead>
               <tbody id="tournament"></tbody>
+            </table>
+          </div>
+        </section>
+
+        <section class="panel">
+          <h2>全体スキャン</h2>
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>対象</th>
+                  <th>方向</th>
+                  <th>信頼度</th>
+                  <th>相場環境</th>
+                  <th>主導モデル</th>
+                  <th>一致度</th>
+                  <th>品質</th>
+                  <th>コスト</th>
+                </tr>
+              </thead>
+              <tbody id="scanTable"></tbody>
             </table>
           </div>
         </section>

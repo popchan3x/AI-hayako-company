@@ -36,6 +36,7 @@ export function classifyMarketRegime(candles) {
     preferredModels = ["Range Reversion", "Indicator Composite"];
     reasons.push(`直近の上限と下限の幅が価格の${round(rangeWidthPercent * 100, 2)}%に収まっています。`);
   } else {
+    preferredModels = ["Indicator Composite", "Volatility Squeeze"];
     reasons.push("トレンドとレンジのどちらにも強く寄っていない状態です。");
   }
 
@@ -68,5 +69,6 @@ export function modelFitBonus(modelName, regime) {
   if (regime.name.includes("トレンド") && modelName === "Range Reversion") return -8;
   if (regime.name === "レンジ" && modelName === "Trend Breakout") return -6;
   if (regime.name === "荒い値動き" && modelName === "Range Reversion") return -4;
+  if (regime.name === "荒い値動き" && modelName === "Volatility Squeeze") return -6;
   return 0;
 }

@@ -156,9 +156,41 @@ export function rangeReversionCandidate(candles) {
   return candidateResult("Range Reversion", direction, 40 + Math.abs(score) * 13, features, rationale, "横ばい相場の反発と反落を見るモデル");
 }
 
+export function volatilitySqueezeCandidate(candles) {
+  const features = latestFeatures(candles);
+  const rationale = [];
+  let score = 0;
+
+  if (features.bollinger) {
+    const bandWidth = (features.bollinger.upper - features.bollinger.lower) / features.close;
+    if (bandWidth < 0.035) {
+      score += Math.sign(features.slope24 || 0) * 1.2;
+      rationale.push(`値動きの帯が価格の${round(bandWidth * 100, 2)}%に縮んでいます。`);
+    } else {
+      rationale.push(`値動きの帯は価格の${round(bandWidth * 100, 2)}%で、強い圧縮ではありません。`);
+    }
+    if (features.close > features.bollinger.upper * 0.997) {
+      score += 1.4;
+      rationale.push("価格が上側の帯に近く、上方向への動き出しを見ます。");
+    }
+    if (features.close < features.bollinger.lower * 1.003) {
+      score -= 1.4;
+      rationale.push("価格が下側の帯に近く、下方向への動き出しを見ます。");
+    }
+  }
+  if (features.volumeRatio > 1.15) {
+    score += Math.sign(score || features.slope24 || 1) * 0.8;
+    rationale.push("出来高が平均を上回り、圧縮後の動き出しに注意します。");
+  }
+
+  const direction = score >= 1.8 ? "買い" : score <= -1.8 ? "売り" : "見送り";
+  return candidateResult("Volatility Squeeze", direction, 38 + Math.abs(score) * 15, features, rationale, "動きが小さくなった後の急な動き出しを見るモデル");
+}
+
 export const CANDIDATES = [
   trendBreakoutCandidate,
   indicatorCompositeCandidate,
   timeSeriesMomentumCandidate,
-  rangeReversionCandidate
+  rangeReversionCandidate,
+  volatilitySqueezeCandidate
 ];

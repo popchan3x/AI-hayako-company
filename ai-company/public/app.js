@@ -8,6 +8,7 @@ const elements = {
   assetSelect: document.querySelector("#assetSelect"),
   providerSelect: document.querySelector("#providerSelect"),
   analyzeButton: document.querySelector("#analyzeButton"),
+  scanButton: document.querySelector("#scanButton"),
   direction: document.querySelector("#direction"),
   confidence: document.querySelector("#confidence"),
   entryPrice: document.querySelector("#entryPrice"),
@@ -16,10 +17,16 @@ const elements = {
   regime: document.querySelector("#regime"),
   selectedModel: document.querySelector("#selectedModel"),
   modelAgreement: document.querySelector("#modelAgreement"),
+  dataQuality: document.querySelector("#dataQuality"),
+  tradingCost: document.querySelector("#tradingCost"),
+  voteWeights: document.querySelector("#voteWeights"),
   explanation: document.querySelector("#explanation"),
   reasons: document.querySelector("#reasons"),
   warnings: document.querySelector("#warnings"),
+  scenarios: document.querySelector("#scenarios"),
+  riskSummary: document.querySelector("#riskSummary"),
   tournament: document.querySelector("#tournament"),
+  scanTable: document.querySelector("#scanTable"),
   xDraft: document.querySelector("#xDraft"),
   chart: document.querySelector("#priceChart")
 };
@@ -67,9 +74,27 @@ function renderTournament(rows) {
       <td>${escapeHtml(row.confidence)}</td>
       <td>${escapeHtml(row.trades)}</td>
       <td>${escapeHtml(row.winRate)}%</td>
+      <td>${escapeHtml(row.expectancy)}%</td>
+      <td>${escapeHtml(row.payoffRatio)}</td>
       <td>${escapeHtml(row.netReturn)}%</td>
       <td>${escapeHtml(row.maxDrawdown)}%</td>
+      <td>${escapeHtml(row.maxLossStreak)}</td>
       <td>${escapeHtml(row.score)}</td>
+    </tr>
+  `).join("");
+}
+
+function renderScan(rows) {
+  elements.scanTable.innerHTML = rows.map((row) => `
+    <tr>
+      <td>${escapeHtml(row.symbol)}</td>
+      <td>${escapeHtml(row.direction)}</td>
+      <td>${escapeHtml(row.confidence)}/100</td>
+      <td>${escapeHtml(row.regime)}</td>
+      <td>${escapeHtml(row.model)}</td>
+      <td>${escapeHtml(row.agreement)}%</td>
+      <td>${escapeHtml(row.quality)}/100</td>
+      <td>${escapeHtml(row.costBps)}bp</td>
     </tr>
   `).join("");
 }
@@ -84,9 +109,14 @@ function renderAnalysis(analysis) {
     elements.regime.textContent = "-";
     elements.selectedModel.textContent = "-";
     elements.modelAgreement.textContent = "-";
+    elements.dataQuality.textContent = analysis.dataQuality ? `${analysis.dataQuality.grade} ${analysis.dataQuality.score}/100` : "-";
+    elements.tradingCost.textContent = "-";
+    elements.voteWeights.textContent = "-";
     elements.explanation.textContent = analysis.reason;
     listItems(elements.reasons, []);
     listItems(elements.warnings, [analysis.reason]);
+    listItems(elements.scenarios, []);
+    listItems(elements.riskSummary, analysis.dataQuality?.issues || []);
     elements.tournament.innerHTML = "";
     elements.xDraft.value = "";
     drawChart([]);
@@ -102,9 +132,14 @@ function renderAnalysis(analysis) {
   elements.regime.textContent = signal.marketRegime.name;
   elements.selectedModel.textContent = signal.selectedModel;
   elements.modelAgreement.textContent = `${signal.modelAgreement}%`;
+  elements.dataQuality.textContent = `${signal.dataQuality.grade} ${signal.dataQuality.score}/100`;
+  elements.tradingCost.textContent = `${signal.costs.totalBps}bp`;
+  elements.voteWeights.textContent = `買${signal.voteWeights.buy}% / 売${signal.voteWeights.sell}% / 待${signal.voteWeights.wait}%`;
   elements.explanation.textContent = signal.explanation;
   listItems(elements.reasons, signal.reasons);
   listItems(elements.warnings, signal.warnings);
+  listItems(elements.scenarios, signal.scenarios);
+  listItems(elements.riskSummary, signal.riskSummary);
   renderTournament(analysis.tournament);
   elements.xDraft.value = signal.xDraft;
   drawChart(analysis.candles);
@@ -153,6 +188,22 @@ function drawChart(candles) {
   context.fillText(String(closes.at(-1).toFixed(closes.at(-1) < 2 ? 5 : 2)), width - 120, scaleY(closes.at(-1)) - 8);
 }
 
+async function scanAll() {
+  elements.scanButton.disabled = true;
+  setStatus("全体スキャン中");
+  try {
+    const provider = elements.providerSelect.value;
+    const payload = await requestJson(`/api/scan?provider=${provider}`);
+    renderScan(payload.rows);
+    setStatus(`全体スキャン完了 ${payload.rows.length}件`);
+  } catch (error) {
+    setStatus("スキャン失敗");
+    elements.explanation.textContent = error.message;
+  } finally {
+    elements.scanButton.disabled = false;
+  }
+}
+
 async function analyze() {
   elements.analyzeButton.disabled = true;
   setStatus("分析中");
@@ -175,7 +226,9 @@ async function init() {
   state.assets = payload.assets;
   renderAssets();
   elements.analyzeButton.addEventListener("click", analyze);
+  elements.scanButton.addEventListener("click", scanAll);
   await analyze();
+  await scanAll();
 }
 
 init().catch((error) => {
