@@ -5,6 +5,7 @@ import { backtestCandidate, runModelTournament } from "../src/backtest.js";
 import { trendBreakoutCandidate } from "../src/candidates.js";
 import { generateDemoCandles } from "../src/dataProvider.js";
 import { runDailyLearning } from "../src/learning.js";
+import { auditUniverse, classifyDataStatus, UNIVERSE_STATUS } from "../src/universeAudit.js";
 import { mkdtemp } from "node:fs/promises";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
@@ -112,4 +113,31 @@ test("daily learning stores one signal per asset without duplicate same-day reco
   assert.equal(second.totals.newSignals, 0);
   assert.equal(second.totals.signals, expected);
   assert.ok(second.totals.pendingOutcomes >= 0);
+});
+
+test("universe audit can write a prioritized report", async () => {
+  const outputDir = await mkdtemp(join(tmpdir(), "market-ai-universe-"));
+  const result = await auditUniverse({ outputDir, concurrency: 12, date: "2026-06-28", useDemo: true });
+  assert.equal(result.summary.total, listAssets().length);
+  assert.equal(result.rows.length, listAssets().length);
+  assert.equal(typeof result.rows[0].priorityScore, "number");
+  assert.ok(result.summary.topPriority.length <= 20);
+});
+
+test("universe audit separates source failures from unavailable symbols", async () => {
+  const outputDir = await mkdtemp(join(tmpdir(), "market-ai-universe-source-failure-"));
+  const result = await auditUniverse({
+    outputDir,
+    concurrency: 20,
+    date: "2026-06-28",
+    fetchCandles: async () => ({
+      candles: [],
+      source: "free-stooq",
+      warning: "無料データ取得に失敗しました: fetch failed"
+    })
+  });
+  assert.equal(result.summary.sourceFailures, listAssets().length);
+  assert.equal(result.summary.unavailable, 0);
+  assert.equal(result.rows.every((row) => row.status === UNIVERSE_STATUS.sourceFailure), true);
+  assert.equal(classifyDataStatus([], { usable: false }, "無料データが空でした。"), UNIVERSE_STATUS.unavailable);
 });

@@ -6,7 +6,8 @@
   "scripts": {
     "start": "node src/server.js",
     "test": "node --test tests/*.test.js",
-    "learn:daily": "node scripts/daily-learn.js --provider=demo"
+    "learn:daily": "node scripts/daily-learn.js --provider=demo",
+    "audit:universe": "node scripts/audit-universe.js --concurrency=8"
   },
   "engines": {
     "node": ">=22"
