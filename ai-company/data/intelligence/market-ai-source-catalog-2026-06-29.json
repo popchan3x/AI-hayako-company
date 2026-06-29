@@ -1,0 +1,205 @@
+{
+  "generatedAt": "2026-06-29T09:29:20+09:00",
+  "role": "CMO",
+  "scope": "相場分析AIの分析材料、参考ツール、データ候補、検証候補を増やすための公開情報調査",
+  "doNotTouch": [
+    "外部決済",
+    "個人情報",
+    "証券口座",
+    "Xへの直接投稿"
+  ],
+  "dailyLearning": {
+    "status": "通常どおり進行",
+    "generatedAt": "2026-06-29T00:22:16.266Z",
+    "provider": "free-composite",
+    "intervals": [
+      "1m",
+      "5m",
+      "15m",
+      "1h",
+      "4h",
+      "1d"
+    ],
+    "totals": {
+      "signals": 713,
+      "newSignals": 546,
+      "outcomes": 480,
+      "newOutcomes": 207,
+      "pendingOutcomes": 1659
+    }
+  },
+  "priorityBrainAdditions": [
+    {
+      "rank": 1,
+      "name": "複数時間足の一致判定",
+      "reason": "短期のだましを減らすため",
+      "dataNeeded": ["1m", "5m", "15m", "1h", "4h", "1d"],
+      "firstAction": "方向が3つ以上一致した時だけ信頼度を上げる"
+    },
+    {
+      "rank": 2,
+      "name": "重要予定フィルター",
+      "reason": "発表前後の急変で損切りになりやすいため",
+      "dataNeeded": ["FOMC", "CPI", "雇用統計", "決算日"],
+      "firstAction": "重要予定の前後30分は警戒を表示する"
+    },
+    {
+      "rank": 3,
+      "name": "市場連動マップ",
+      "reason": "ドル、金利、株、金が同時に動く局面を読むため",
+      "dataNeeded": ["DXY", "US10Y", "VIX", "SPY", "QQQ", "XAUUSD"],
+      "firstAction": "XAUUSDの判断にドルと米金利の向きを加える"
+    },
+    {
+      "rank": 4,
+      "name": "ニュース急変検知",
+      "reason": "価格が動く前後の理由を説明しやすくするため",
+      "dataNeeded": ["GDELT", "企業開示", "中央銀行発表"],
+      "firstAction": "銘柄名と通貨名のニュース件数を保存する"
+    },
+    {
+      "rank": 5,
+      "name": "データ品質スコア",
+      "reason": "通信失敗や欠損で間違った分析を出さないため",
+      "dataNeeded": ["取得成功", "欠損率", "遅延時間", "価格の異常値"],
+      "firstAction": "品質が70点未満なら分析不可にする"
+    }
+  ],
+  "sourceCategories": [
+    "チャート表示",
+    "自動分析ツール",
+    "市場データ",
+    "公式統計",
+    "貴金属",
+    "ニュース",
+    "検証基盤",
+    "時系列AI"
+  ],
+  "sources": [
+    {
+      "name": "TradingView Advanced Chart Widget",
+      "category": "チャート表示",
+      "url": "https://www.tradingview.com/widget-docs/widgets/charts/advanced-chart/",
+      "useFor": "リアルで見やすいチャート、時間足切替、銘柄切替の参考",
+      "priority": 1,
+      "risk": "表示や利用条件を確認する"
+    },
+    {
+      "name": "TradingView Dynamic Symbols",
+      "category": "チャート表示",
+      "url": "https://www.tradingview.com/widget-docs/tutorials/build-page/dynamic-symbols/",
+      "useFor": "ユーザーが選んだ銘柄に合わせてチャートを切り替える",
+      "priority": 1,
+      "risk": "外部チャート依存になる"
+    },
+    {
+      "name": "TrendSpider",
+      "category": "自動分析ツール",
+      "url": "https://trendspider.com/",
+      "useFor": "自動線引き、複数時間足、アラート、検証画面の参考",
+      "priority": 1,
+      "risk": "機能を真似る時は表現と権利に注意"
+    },
+    {
+      "name": "Tickeron",
+      "category": "自動分析ツール",
+      "url": "https://tickeron.com/",
+      "useFor": "AIシグナル、確率表示、売買候補の見せ方の参考",
+      "priority": 1,
+      "risk": "売買推奨に見えすぎない表現にする"
+    },
+    {
+      "name": "Koyfin",
+      "category": "市場ダッシュボード",
+      "url": "https://www.koyfin.com/",
+      "useFor": "株、指数、為替、金利、ニュースを1画面で比較する参考",
+      "priority": 2,
+      "risk": "有料データの扱いに注意"
+    },
+    {
+      "name": "Polygon.io",
+      "category": "市場データ",
+      "url": "https://polygon.io/docs",
+      "useFor": "株、為替、暗号資産などの価格取得候補",
+      "priority": 1,
+      "risk": "料金と利用制限を確認する"
+    },
+    {
+      "name": "Alpha Vantage",
+      "category": "市場データ",
+      "url": "https://www.alphavantage.co/documentation/",
+      "useFor": "無料から試せる価格データ候補",
+      "priority": 2,
+      "risk": "取得回数制限に注意"
+    },
+    {
+      "name": "Nasdaq Data Link",
+      "category": "市場データ",
+      "url": "https://data.nasdaq.com/",
+      "useFor": "金融、経済、代替データの候補",
+      "priority": 2,
+      "risk": "有料データの契約条件を確認する"
+    },
+    {
+      "name": "FRED",
+      "category": "公式統計",
+      "url": "https://fred.stlouisfed.org/",
+      "useFor": "米国金利、景気、物価の背景材料",
+      "priority": 1,
+      "risk": "短期売買では更新頻度が低い指標もある"
+    },
+    {
+      "name": "LBMA Precious Metal Prices",
+      "category": "貴金属",
+      "url": "https://www.lbma.org.uk/prices-and-data/precious-metal-prices",
+      "useFor": "金、銀、プラチナ、パラジウム価格の公式系確認",
+      "priority": 1,
+      "risk": "リアルタイムではない場合がある"
+    },
+    {
+      "name": "GDELT",
+      "category": "ニュース",
+      "url": "https://www.gdeltproject.org/",
+      "useFor": "世界ニュースの急増とテーマ変化を拾う",
+      "priority": 1,
+      "risk": "ニュース量だけで売買判断しない"
+    },
+    {
+      "name": "Backtrader",
+      "category": "検証基盤",
+      "url": "https://www.backtrader.com/",
+      "useFor": "売買ルールを過去データで確認する候補",
+      "priority": 2,
+      "risk": "検証条件を現実に近づける"
+    },
+    {
+      "name": "QuantConnect LEAN",
+      "category": "検証基盤",
+      "url": "https://www.quantconnect.com/lean",
+      "useFor": "複数市場の検証と運用基盤の参考",
+      "priority": 2,
+      "risk": "利用条件と学習コストを確認する"
+    },
+    {
+      "name": "Temporal Fusion Transformer",
+      "category": "時系列AI",
+      "url": "https://arxiv.org/abs/1912.09363",
+      "useFor": "複数の材料を使う時系列予測の参考",
+      "priority": 2,
+      "risk": "最初から複雑にしすぎない"
+    },
+    {
+      "name": "FinGPT",
+      "category": "時系列AI",
+      "url": "https://arxiv.org/search/?query=FinGPT&searchtype=all",
+      "useFor": "金融ニュースや文章から説明材料を作る参考",
+      "priority": 2,
+      "risk": "ニュースの真偽確認が必要"
+    }
+  ],
+  "nextActions": [
+    "市場連動マップ、重要予定フィルター、データ品質スコアを先に設計する",
+    "日次学習の保存項目に、使った材料と相場環境を追加する",
+    "7日分の記録後に、勝率、損益、最大下落、手数料込み成績で比較する"
+  ]
+}

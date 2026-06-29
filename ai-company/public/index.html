@@ -111,6 +111,64 @@
           <canvas id="priceChart" width="1100" height="360"></canvas>
         </section>
 
+        <section class="panel guard-panel">
+          <div class="panel-title-row">
+            <div>
+              <p class="eyebrow">安全フィルター</p>
+              <h2>市場連動・重要予定・品質</h2>
+            </div>
+            <div class="source-pill" id="guardSummary">-</div>
+          </div>
+          <div class="guard-grid">
+            <article class="guard-card">
+              <header>
+                <strong>市場連動マップ</strong>
+                <span id="marketMapScore">-</span>
+              </header>
+              <p id="marketMapSummary">周辺市場の確認を待っています。</p>
+              <div class="table-wrap mini-table">
+                <table class="compact-table">
+                  <thead>
+                    <tr>
+                      <th>材料</th>
+                      <th>判定</th>
+                      <th>なぜそう見るか</th>
+                    </tr>
+                  </thead>
+                  <tbody id="marketMapDrivers"></tbody>
+                </table>
+              </div>
+              <div class="currency-strength-panel" id="currencyStrengthPanel" hidden>
+                <div class="currency-strength-head">
+                  <strong>主要7通貨 強弱マップ</strong>
+                  <span id="currencyStrengthStatus">-</span>
+                </div>
+                <p id="currencyStrengthSummary">FXを選ぶと表示します。</p>
+                <div class="currency-strength-bars" id="currencyStrengthBars"></div>
+                <ul id="currencyStrengthNotes"></ul>
+              </div>
+            </article>
+
+            <article class="guard-card">
+              <header>
+                <strong>重要予定フィルター</strong>
+                <span id="eventFilterScore">-</span>
+              </header>
+              <p id="eventFilterSummary">警戒時間の確認を待っています。</p>
+              <ul id="eventFilterEvents"></ul>
+            </article>
+
+            <article class="guard-card">
+              <header>
+                <strong>データ品質スコア</strong>
+                <span id="qualityGateScore">-</span>
+              </header>
+              <p id="qualityGateSummary">データ品質の確認を待っています。</p>
+              <ul id="qualityGateIssues"></ul>
+            </article>
+          </div>
+        </section>
+
         <section class="panel materials-panel">
           <div class="panel-title-row">
             <div>
@@ -212,6 +270,8 @@
                   <th>一致度</th>
                   <th>勝ち筋</th>
                   <th>自動売買</th>
+                  <th>市場連動</th>
+                  <th>予定</th>
                   <th>品質</th>
                   <th>コスト</th>
                 </tr>

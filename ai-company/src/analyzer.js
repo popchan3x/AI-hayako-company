@@ -7,6 +7,7 @@ import { classifyMarketRegime } from "./marketRegime.js";
 import { assessDataQuality } from "./dataQuality.js";
 import { estimateTradingCosts } from "./costs.js";
 import { buildWorldClassIntelligence } from "./worldClassIntelligence.js";
+import { buildCurrencyStrengthMap, buildImportantEventFilter, buildMarketLinkageMap } from "./marketGuards.js";
 
 const MIN_CANDLES = 90;
 const DIRECTIONS = ["買い", "売り", "見送り"];
@@ -32,7 +33,7 @@ function unique(items) {
   return [...new Set(items.filter(Boolean))];
 }
 
-function buildWarnings(features, dataWarning, regime, dataQuality, costs) {
+function buildWarnings(features, dataWarning, regime, dataQuality, costs, marketLinkage, eventFilter) {
   const warnings = [
     dataWarning,
     "検証用シグナルです。実売買の最終判断はユーザーが行ってください。"
@@ -53,16 +54,22 @@ function buildWarnings(features, dataWarning, regime, dataQuality, costs) {
   if (costs.totalBps >= 5) {
     warnings.push(`売買コストの概算は${costs.totalBps}bpです。短い利幅では不利になりやすいです。`);
   }
-  warnings.push("重要指標カレンダーは未接続です。発表前後の見送りも確認してください。");
+  if (marketLinkage?.status === "逆風") {
+    warnings.push(`周辺市場は逆風です。${marketLinkage.summary}`);
+  }
+  if (eventFilter?.status !== "通常") {
+    warnings.push(eventFilter.warnings[0]);
+  }
+  warnings.push(eventFilter?.calendarStatus || "重要指標カレンダーは未接続です。発表前後の見送りも確認してください。");
 
   return unique(warnings).slice(0, 5);
 }
 
 function buildAiExplanation(asset, signal) {
   if (signal.direction === "見送り") {
-    return `${asset.name}は今すぐ入るより、次のはっきりした動きを待つ形です。最終判断は${signal.selectedModel}、相場環境は${signal.marketRegime.name}、モデル一致度は${signal.modelAgreement}%、データ品質は${signal.dataQuality.grade}です。`;
+    return `${asset.name}は今すぐ入るより、次のはっきりした動きを待つ形です。最終判断は${signal.selectedModel}、相場環境は${signal.marketRegime.name}、市場連動は${signal.marketLinkage.status}、重要予定は${signal.eventFilter.status}、データ品質は${signal.dataQuality.grade}です。`;
   }
-  return `${asset.name}は短期では${signal.direction}を優先して見る形です。入口は${signal.entryPrice}、損切りは${signal.stopLoss}、利確は${signal.takeProfit}です。最終判断は${signal.selectedModel}、主導モデルは${signal.leadModel}、モデル一致度は${signal.modelAgreement}%です。`;
+  return `${asset.name}は短期では${signal.direction}を優先して見る形です。入口は${signal.entryPrice}、損切りは${signal.stopLoss}、利確は${signal.takeProfit}です。市場連動は${signal.marketLinkage.status}、重要予定は${signal.eventFilter.status}、モデル一致度は${signal.modelAgreement}%です。`;
 }
 
 function buildXDraft(asset, signal) {
@@ -72,6 +79,8 @@ function buildXDraft(asset, signal) {
     `入口: ${signal.entryPrice} / 損切り: ${signal.stopLoss} / 利確: ${signal.takeProfit}`,
     `信頼度: ${signal.confidence}/100`,
     `相場環境: ${signal.marketRegime.name}`,
+    `市場連動: ${signal.marketLinkage.status} ${signal.marketLinkage.score}/100`,
+    `重要予定: ${signal.eventFilter.status} ${signal.eventFilter.score}/100`,
     `データ品質: ${signal.dataQuality.grade}`,
     "直接の売買推奨ではありません。検証用メモです。"
   ].join("\n");
@@ -154,15 +163,19 @@ function buildScenarios(direction, features) {
   ];
 }
 
-function buildRiskSummary(regime, dataQuality, costs, modelAgreement) {
+function buildRiskSummary(regime, dataQuality, costs, modelAgreement, marketLinkage, eventFilter) {
   const items = [
     `相場環境: ${regime.name}、危険度${regime.riskLevel}`,
+    marketLinkage ? `市場連動: ${marketLinkage.status}、スコア${marketLinkage.score}/100` : null,
+    eventFilter ? `重要予定: ${eventFilter.status}、スコア${eventFilter.score}/100` : null,
     `データ品質: ${dataQuality.grade}、スコア${dataQuality.score}/100`,
     `売買コスト概算: ${costs.totalBps}bp`,
     `モデル一致度: ${modelAgreement}%`
-  ];
+  ].filter(Boolean);
   if (modelAgreement < 50) items.push("モデルが割れているため、信頼度を抑えています。");
   if (dataQuality.score < 70) items.push("データ品質が十分ではないため、分析不可または見送りを優先します。");
+  if (marketLinkage?.status === "逆風") items.push("周辺市場の逆風があるため、入口を急がない判断を強めます。");
+  if (eventFilter?.status === "見送り優先") items.push("重要予定の警戒時間内のため、見送りを優先します。");
   return items.slice(0, 6);
 }
 
@@ -170,7 +183,7 @@ function scoreFromDistance(value, center, width) {
   return clamp(Math.round(100 - Math.abs(value - center) * width), 0, 100);
 }
 
-function buildAnalysisMaterials(features, tournament, regime, dataQuality, costs, timeframe) {
+function buildAnalysisMaterials(features, tournament, regime, dataQuality, costs, timeframe, marketLinkage, eventFilter) {
   const leader = tournament[0];
   const trendScore = features.sma20 > features.sma50 ? 72 : 48;
   const momentumScore = scoreFromDistance(features.rsi14 || 50, 58, 2.2);
@@ -200,10 +213,13 @@ function buildAnalysisMaterials(features, tournament, regime, dataQuality, costs
       { name: "節目", score: levelScore, detail: `支持線${round(features.support, 4)}、抵抗線${round(features.resistance, 4)}を入口と撤退の目安にします。` },
       { name: "モデル大会", score: clamp(Math.round((leader?.adjustedScore || 0) + 55), 0, 100), detail: `${leader?.name || "未計算"}が現在の首位です。複数モデルの勝ち筋を比較します。` },
       { name: "コスト", score: clamp(100 - costs.totalBps * 8, 0, 100), detail: `想定コストは${costs.totalBps}bpです。短期足ほど重く見ます。` },
-      { name: "データ品質", score: dataQuality.score, detail: `${dataQuality.grade} ${dataQuality.score}/100です。欠損や遅延がある時は見送りを強めます。` }
+      { name: "市場連動", score: marketLinkage?.score ?? 50, detail: marketLinkage?.summary || "周辺市場の確認は個別分析で行います。" },
+      { name: "重要予定", score: eventFilter?.score ?? 100, detail: eventFilter?.warnings?.[0] || "直近の警戒時間はありません。" },
+      { name: "データ品質", score: dataQuality.score, detail: `${dataQuality.decision} ${dataQuality.score}/100です。欠損や遅延がある時は見送りを強めます。` }
     ],
     playbook: [
       `${regime.name}では、主役モデルだけでなくモデル一致度を重視します。`,
+      "市場連動、重要予定、データ品質の3つで危険なシグナルをふるい落とします。",
       "入口、損切り、利確はチャートの水平線で確認します。",
       "短期足で方向が出ても、日足の大きな流れと逆ならサイズを小さく扱います。"
     ]
@@ -276,6 +292,56 @@ function selectMetaSignal(tournament, features, regime, dataQuality, costs) {
   };
 }
 
+function applyDecisionGuards(signal, features, marketLinkage, eventFilter) {
+  let direction = signal.direction;
+  let confidence = signal.confidence + (marketLinkage?.confidenceAdjustment || 0) + (eventFilter?.confidenceAdjustment || 0);
+  const reasons = [...signal.reasons];
+
+  if (eventFilter?.status === "見送り優先" && direction !== "見送り") {
+    direction = "見送り";
+    confidence = Math.min(confidence, 62);
+    reasons.unshift(`重要予定フィルターが${eventFilter.score}/100のため、見送りを優先します。`);
+  } else if (eventFilter?.status === "警戒" && direction !== "見送り") {
+    confidence = Math.min(confidence, 78);
+    reasons.unshift(`重要予定フィルターが警戒です。${eventFilter.warnings[0]}`);
+  }
+
+  if (marketLinkage?.status === "逆風" && direction !== "見送り") {
+    confidence = Math.min(confidence - 6, 68);
+    reasons.unshift(`市場連動マップが逆風です。${marketLinkage.summary}`);
+    if (signal.modelAgreement < 55) {
+      direction = "見送り";
+      reasons.unshift("周辺市場の逆風とモデル割れが重なったため、見送りに切り替えます。");
+    }
+  } else if (marketLinkage?.status === "追い風" && direction !== "見送り") {
+    reasons.unshift(`市場連動マップが追い風です。${marketLinkage.summary}`);
+  }
+
+  if (signal.dataQuality.decision === "注意付き分析") {
+    confidence = Math.min(confidence, 82);
+  }
+
+  confidence = clamp(Math.round(confidence), 0, 100);
+
+  return {
+    ...signal,
+    ...buildPricePlan(direction, features),
+    direction,
+    confidence,
+    marketLinkage,
+    eventFilter,
+    scenarios: buildScenarios(direction, features),
+    riskSummary: buildRiskSummary(signal.marketRegime, signal.dataQuality, signal.costs, signal.modelAgreement, marketLinkage, eventFilter),
+    reasons: unique(reasons).slice(0, 5),
+    qualityChecks: {
+      ...signal.qualityChecks,
+      includesMarketLinkage: true,
+      includesImportantEventFilter: true,
+      includesDataQualityGate: true
+    }
+  };
+}
+
 export async function analyzeSymbol(symbol, options = {}) {
   const asset = findAsset(symbol);
   if (!asset) return unavailable(symbol, "登録されていない分析対象です。");
@@ -286,7 +352,7 @@ export async function analyzeSymbol(symbol, options = {}) {
     provider: options.provider || "demo",
     interval
   });
-  const dataQuality = assessDataQuality(candles, source);
+  const dataQuality = assessDataQuality(candles, source, { interval, requiredBars: MIN_CANDLES });
 
   if (!candles || candles.length < MIN_CANDLES || !dataQuality.usable) {
     return {
@@ -300,10 +366,27 @@ export async function analyzeSymbol(symbol, options = {}) {
   const tournament = runModelTournament(candles, { costRate: costs.costRate });
   const regime = classifyMarketRegime(candles);
   const metaSignal = selectMetaSignal(tournament, features, regime, dataQuality, costs);
+  const eventFilter = buildImportantEventFilter(asset);
+  const marketLinkage = await buildMarketLinkageMap({
+    asset,
+    targetDirection: metaSignal.direction,
+    provider: options.provider || "demo",
+    interval,
+    includeContext: options.includeContext !== false
+  });
+  const currencyStrength = asset.group === "FX"
+    ? await buildCurrencyStrengthMap({
+      provider: options.provider || "demo",
+      interval,
+      includeContext: options.includeContext !== false
+    })
+    : null;
+  const guardedSignal = applyDecisionGuards(metaSignal, features, marketLinkage, eventFilter);
   const signal = {
-    ...metaSignal,
+    ...guardedSignal,
+    currencyStrength,
     validationLabel: "検証用シグナル",
-    warnings: buildWarnings(features, warning, regime, dataQuality, costs)
+    warnings: buildWarnings(features, warning, regime, dataQuality, costs, marketLinkage, eventFilter)
   };
   signal.intelligence = buildWorldClassIntelligence({
     asset,
@@ -327,7 +410,7 @@ export async function analyzeSymbol(symbol, options = {}) {
     timeframe: TIMEFRAMES[interval],
     candles: candles.slice(-180),
     signal,
-    analysisMaterials: buildAnalysisMaterials(features, tournament, regime, dataQuality, costs, interval),
+    analysisMaterials: buildAnalysisMaterials(features, tournament, regime, dataQuality, costs, interval, marketLinkage, eventFilter),
     features: {
       close: round(features.close, 4),
       sma20: round(features.sma20, 4),

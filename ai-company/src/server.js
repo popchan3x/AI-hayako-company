@@ -83,7 +83,7 @@ async function handleApi(request, response) {
     const interval = url.searchParams.get("interval") || "1d";
     const rows = [];
     for (const asset of listAssets()) {
-      const result = await analyzeSymbol(asset.symbol, { provider, interval });
+      const result = await analyzeSymbol(asset.symbol, { provider, interval, includeContext: false });
       rows.push({
         symbol: asset.symbol,
         name: asset.name,
@@ -96,6 +96,8 @@ async function handleApi(request, response) {
         agreement: result.signal?.modelAgreement ?? 0,
         edgeScore: result.signal?.intelligence?.edgeScore ?? 0,
         autoTradeGate: result.signal?.intelligence?.autoTradeGate?.status ?? "-",
+        marketLinkage: result.signal?.marketLinkage?.score ?? 0,
+        eventRisk: result.signal?.eventFilter?.status ?? "-",
         quality: result.signal?.dataQuality?.score ?? result.dataQuality?.score ?? 0,
         costBps: result.signal?.costs?.totalBps ?? 0,
         reason: result.signal?.reasons?.[0] ?? result.reason

@@ -38,9 +38,13 @@ function factorScores({ signal, features, tournament, regime, dataQuality, costs
   const agreementScore = clamp(signal.modelAgreement);
   const riskScore = clamp(100 - costs.totalBps * 4 - (regime.riskLevel === "高い" ? 18 : 0));
   const dataScore = clamp(dataQuality.score);
+  const marketLinkScore = clamp(signal.marketLinkage?.score ?? 50);
+  const eventScore = clamp(signal.eventFilter?.score ?? 100);
 
   return [
     { name: "データ品質", score: dataScore, detail: `${dataQuality.bars}本、品質${dataQuality.score}/100` },
+    { name: "市場連動", score: marketLinkScore, detail: signal.marketLinkage?.summary || "周辺市場は未評価です。" },
+    { name: "重要予定", score: eventScore, detail: signal.eventFilter?.warnings?.[0] || "重要予定の警戒はありません。" },
     { name: "モデル検証", score: validationScore, detail: `${tournament[0]?.metrics.trades || 0}回の過去検証を反映` },
     { name: "モデル一致", score: agreementScore, detail: `一致度${signal.modelAgreement}%` },
     { name: "流れ", score: trendScore, detail: `相場環境は${regime.name}` },
@@ -54,6 +58,8 @@ function factorScores({ signal, features, tournament, regime, dataQuality, costs
 function weightedEdgeScore(factors) {
   const weights = {
     "データ品質": 1.15,
+    "市場連動": 1,
+    "重要予定": 1.15,
     "モデル検証": 1.25,
     "モデル一致": 1.05,
     "流れ": 0.9,
@@ -72,7 +78,7 @@ function blindSpots({ asset, dataQuality }) {
   if (dataQuality.source === "demo") {
     items.push("現在はデモデータです。実データで同じ結果になるとは限りません。");
   }
-  items.push("板情報、先物建玉、オプション、ニュース、重要指標カレンダーはまだ未接続です。");
+  items.push("板情報、先物建玉、オプション、ニュース、実際の重要指標カレンダーはまだ未接続です。");
   if (asset.group === "FX" || asset.group === "貴金属") {
     items.push("金利差、ドル指数、米国債利回り、VIXをまだ直接見ていません。");
   }
@@ -96,9 +102,19 @@ function externalSignalMap(asset) {
       use: "資金調達率、建玉、満期、偏った賭けを確認する"
     },
     {
-      name: "マクロ",
-      status: "未接続",
-      use: "金利、ドル指数、VIX、重要指標で見送り判定を強くする"
+      name: "市場連動",
+      status: "軽量接続",
+      use: "関連銘柄、ドル代理、金利代理、VIX代理で追い風と逆風を見る"
+    },
+    {
+      name: "重要予定",
+      status: "定例時間で接続",
+      use: "経済指標が出やすい時間、寄り付き、引けで見送り判定を強くする"
+    },
+    {
+      name: "データ品質",
+      status: "接続済み",
+      use: "欠損、遅延、異常値、必要本数を確認し、壊れたデータなら分析を止める"
     },
     {
       name: "ニュースとSNS",

@@ -32,6 +32,21 @@ const elements = {
   intelligenceVerdict: document.querySelector("#intelligenceVerdict"),
   autoTradeGate: document.querySelector("#autoTradeGate"),
   factorScores: document.querySelector("#factorScores"),
+  guardSummary: document.querySelector("#guardSummary"),
+  marketMapScore: document.querySelector("#marketMapScore"),
+  marketMapSummary: document.querySelector("#marketMapSummary"),
+  marketMapDrivers: document.querySelector("#marketMapDrivers"),
+  currencyStrengthPanel: document.querySelector("#currencyStrengthPanel"),
+  currencyStrengthStatus: document.querySelector("#currencyStrengthStatus"),
+  currencyStrengthSummary: document.querySelector("#currencyStrengthSummary"),
+  currencyStrengthBars: document.querySelector("#currencyStrengthBars"),
+  currencyStrengthNotes: document.querySelector("#currencyStrengthNotes"),
+  eventFilterScore: document.querySelector("#eventFilterScore"),
+  eventFilterSummary: document.querySelector("#eventFilterSummary"),
+  eventFilterEvents: document.querySelector("#eventFilterEvents"),
+  qualityGateScore: document.querySelector("#qualityGateScore"),
+  qualityGateSummary: document.querySelector("#qualityGateSummary"),
+  qualityGateIssues: document.querySelector("#qualityGateIssues"),
   blindSpots: document.querySelector("#blindSpots"),
   dataUpgrades: document.querySelector("#dataUpgrades"),
   externalSignals: document.querySelector("#externalSignals"),
@@ -238,6 +253,8 @@ function renderScan(rows) {
       <td>${escapeHtml(row.agreement)}%</td>
       <td>${escapeHtml(row.edgeScore)}/100</td>
       <td>${escapeHtml(row.autoTradeGate)}</td>
+      <td>${escapeHtml(row.marketLinkage)}/100</td>
+      <td>${escapeHtml(row.eventRisk)}</td>
       <td>${escapeHtml(row.quality)}/100</td>
       <td>${escapeHtml(row.costBps)}bp</td>
     </tr>
@@ -282,6 +299,104 @@ function renderExternalSignals(items) {
       <td>${escapeHtml(item.use)}</td>
     </tr>
   `).join("");
+}
+
+function minuteLabel(value) {
+  if (!Number.isFinite(value)) return "-";
+  if (value === 0) return "今";
+  if (value > 0) return `あと${value}分`;
+  return `${Math.abs(value)}分前`;
+}
+
+function renderGuardRails(signal, dataQuality) {
+  if (!signal) {
+    elements.guardSummary.textContent = "-";
+    elements.marketMapScore.textContent = "-";
+    elements.marketMapSummary.textContent = "周辺市場の確認を待っています。";
+    elements.marketMapDrivers.innerHTML = "";
+    renderCurrencyStrength(null);
+    elements.eventFilterScore.textContent = "-";
+    elements.eventFilterSummary.textContent = "警戒時間の確認を待っています。";
+    listItems(elements.eventFilterEvents, []);
+    elements.qualityGateScore.textContent = dataQuality ? `${dataQuality.score}/100` : "-";
+    elements.qualityGateSummary.textContent = dataQuality?.decision || "データ品質の確認を待っています。";
+    listItems(elements.qualityGateIssues, dataQuality?.issues || []);
+    return;
+  }
+
+  const market = signal.marketLinkage;
+  const eventFilter = signal.eventFilter;
+  const quality = signal.dataQuality;
+
+  elements.guardSummary.textContent = `${market.status} / ${eventFilter.status} / ${quality.decision}`;
+  elements.marketMapScore.textContent = `${market.score}/100`;
+  elements.marketMapSummary.textContent = market.summary;
+  elements.marketMapDrivers.innerHTML = (market.drivers || []).map((driver) => `
+    <tr>
+      <td>
+        <strong>${escapeHtml(driver.symbol)}</strong><br>
+        <small>${escapeHtml(driver.role)} / ${escapeHtml(driver.relationLabel || "-")}</small><br>
+        <small>${escapeHtml(driver.expectedMove || "-")}</small>
+      </td>
+      <td>
+        <strong>${escapeHtml(driver.alignment)}</strong><br>
+        <small>${escapeHtml(driver.moveMeaning || driver.actualMove)}</small>
+      </td>
+      <td>${escapeHtml(driver.impact || driver.detail)}</td>
+    </tr>
+  `).join("");
+  renderCurrencyStrength(signal.currencyStrength);
+
+  elements.eventFilterScore.textContent = `${eventFilter.score}/100`;
+  elements.eventFilterSummary.textContent = `${eventFilter.status}。${eventFilter.calendarStatus}`;
+  const eventRows = [
+    ...(eventFilter.activeEvents || []).map((event) => `${event.label}: 警戒中、${minuteLabel(event.minutesToEvent)}。${event.note}`),
+    ...(eventFilter.upcomingEvents || []).map((event) => `${event.label}: ${minuteLabel(event.minutesToEvent)}。${event.note}`)
+  ];
+  listItems(elements.eventFilterEvents, eventRows.length ? eventRows : eventFilter.warnings);
+
+  elements.qualityGateScore.textContent = `${quality.score}/100`;
+  elements.qualityGateSummary.textContent = `${quality.decision}。${quality.bars}本 / 必要${quality.requiredBars}本。`;
+  const qualityRows = [
+    ...(quality.issues || []),
+    ...(quality.components || []).slice(0, 3).map((component) => `${component.label}: ${component.score}/100、${component.detail}`)
+  ];
+  listItems(elements.qualityGateIssues, qualityRows.slice(0, 6));
+}
+
+function renderCurrencyStrength(strength) {
+  if (!elements.currencyStrengthPanel) return;
+  if (!strength?.enabled) {
+    elements.currencyStrengthPanel.hidden = true;
+    elements.currencyStrengthStatus.textContent = "-";
+    elements.currencyStrengthSummary.textContent = "FXを選ぶと表示します。";
+    elements.currencyStrengthBars.innerHTML = "";
+    listItems(elements.currencyStrengthNotes, []);
+    return;
+  }
+
+  elements.currencyStrengthPanel.hidden = false;
+  elements.currencyStrengthStatus.textContent = `${strength.status} / ${strength.timeframe}`;
+  elements.currencyStrengthSummary.textContent = `${strength.summary} ${strength.method}`;
+  elements.currencyStrengthBars.innerHTML = (strength.currencies || []).map((currency) => {
+    const weakClass = currency.score < 50 ? " weak" : "";
+    return `
+      <div class="currency-row">
+        <div class="currency-code">${escapeHtml(currency.code)}</div>
+        <div class="currency-track" aria-label="${escapeHtml(currency.name)} ${escapeHtml(currency.score)}">
+          <span class="currency-fill${weakClass}" style="width: ${Math.max(4, Math.min(100, currency.score))}%"></span>
+        </div>
+        <div class="currency-score">${escapeHtml(currency.score)}/100</div>
+      </div>
+    `;
+  }).join("");
+
+  const strongest = (strength.strongest || []).map((currency) => `${currency.code} ${currency.score}/100`);
+  const weakest = (strength.weakest || []).map((currency) => `${currency.code} ${currency.score}/100`);
+  listItems(elements.currencyStrengthNotes, [
+    `強い通貨: ${strongest.join("、")}`,
+    `弱い通貨: ${weakest.join("、")}`
+  ]);
 }
 
 function renderAnalysisMaterials(materials) {
@@ -366,6 +481,7 @@ function clearIntelligence() {
   listItems(elements.blindSpots, []);
   listItems(elements.dataUpgrades, []);
   elements.externalSignals.innerHTML = "";
+  renderGuardRails(null, null);
 }
 
 function renderAnalysis(analysis) {
@@ -390,6 +506,7 @@ function renderAnalysis(analysis) {
     elements.tournament.innerHTML = "";
     elements.xDraft.value = "";
     renderAnalysisMaterials(null);
+    renderGuardRails(null, analysis.dataQuality);
     drawChart([]);
     return;
   }
@@ -411,6 +528,7 @@ function renderAnalysis(analysis) {
   elements.intelligenceVerdict.textContent = signal.intelligence.verdict;
   elements.autoTradeGate.textContent = signal.intelligence.autoTradeGate.status;
   renderFactorScores(signal.intelligence.factors);
+  renderGuardRails(signal, signal.dataQuality);
   listItems(elements.blindSpots, signal.intelligence.blindSpots);
   listItems(elements.dataUpgrades, signal.intelligence.nextDataUpgrades);
   renderExternalSignals(signal.intelligence.externalSignals);

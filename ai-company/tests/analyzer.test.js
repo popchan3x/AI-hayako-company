@@ -6,6 +6,8 @@ import { trendBreakoutCandidate } from "../src/candidates.js";
 import { fetchFreeCandles, fetchYahooCandles, generateDemoCandles, resolveYahooSymbol } from "../src/dataProvider.js";
 import { runDailyLearning } from "../src/learning.js";
 import { auditUniverse, classifyDataStatus, UNIVERSE_STATUS } from "../src/universeAudit.js";
+import { assessDataQuality } from "../src/dataQuality.js";
+import { buildCurrencyStrengthMap, buildImportantEventFilter } from "../src/marketGuards.js";
 import { mkdtemp } from "node:fs/promises";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
@@ -50,10 +52,17 @@ test("analyzer returns priced validation signal with regime and meta model", asy
   assert.equal(typeof result.signal.dataQuality.score, "number");
   assert.equal(typeof result.signal.costs.totalBps, "number");
   assert.equal(typeof result.signal.voteWeights.buy, "number");
+  assert.equal(typeof result.signal.marketLinkage.score, "number");
+  assert.equal(typeof result.signal.marketLinkage.status, "string");
+  assert.ok(result.signal.marketLinkage.drivers.some((driver) => typeof driver.impact === "string" && driver.impact.length > 0));
+  assert.ok(result.signal.marketLinkage.drivers.some((driver) => typeof driver.moveMeaning === "string" && driver.moveMeaning.length > 0));
+  assert.equal(typeof result.signal.eventFilter.score, "number");
+  assert.equal(typeof result.signal.eventFilter.status, "string");
+  assert.equal(typeof result.signal.dataQuality.decision, "string");
   assert.equal(typeof result.signal.intelligence.edgeScore, "number");
   assert.equal(result.signal.intelligence.autoTradeGate.canAutoTrade, false);
   assert.equal(result.signal.intelligence.sourceSafety.noExternalCodeExecuted, true);
-  assert.ok(result.signal.intelligence.factors.length >= 8);
+  assert.ok(result.signal.intelligence.factors.length >= 10);
   assert.ok(result.signal.intelligence.externalSignals.length >= 5);
   assert.ok(result.signal.scenarios.length >= 3);
   assert.ok(result.signal.riskSummary.length >= 4);
@@ -219,6 +228,43 @@ test("analyzer returns timeframe and visible analysis materials", async () => {
   assert.ok(result.candles.length <= 180);
   assert.ok(result.analysisMaterials.cards.length >= 8);
   assert.ok(result.analysisMaterials.summary.length >= 3);
+});
+
+test("data quality score explains freshness, shape, and continuity", () => {
+  const candles = generateDemoCandles("XAUUSD", 120, "5m");
+  candles[20] = { ...candles[20], high: candles[20].low - 1 };
+  candles[50] = { ...candles[50], close: candles[49].close * 1.25 };
+  const quality = assessDataQuality(candles, "demo", { interval: "5m", requiredBars: 90 });
+  assert.equal(quality.usable, false);
+  assert.ok(quality.score < 90);
+  assert.ok(quality.components.length >= 6);
+  assert.ok(quality.issues.some((issue) => issue.includes("壊れている")));
+});
+
+test("important event filter warns inside recurring US data window", () => {
+  const asset = listAssets().find((item) => item.symbol === "XAUUSD");
+  const filter = buildImportantEventFilter(asset, { now: new Date("2026-06-29T12:30:00.000Z") });
+  assert.equal(filter.status, "見送り優先");
+  assert.ok(filter.score < 80);
+  assert.ok(filter.activeEvents.some((event) => event.id === "us-data"));
+  assert.ok(filter.warnings.length >= 1);
+});
+
+test("currency strength map ranks seven major currencies for FX", async () => {
+  const result = await analyzeSymbol("USDJPY", { provider: "demo", interval: "1h" });
+  assert.equal(result.ok, true);
+  assert.equal(result.signal.currencyStrength.enabled, true);
+  assert.equal(result.signal.currencyStrength.currencies.length, 7);
+  assert.equal(result.signal.currencyStrength.pairs.length, 21);
+  assert.ok(result.signal.currencyStrength.strongest.length >= 3);
+  assert.ok(result.signal.currencyStrength.weakest.length >= 3);
+  assert.ok(result.signal.currencyStrength.currencies.every((currency) => Number.isFinite(currency.score)));
+});
+
+test("currency strength map can be skipped for fast scan mode", async () => {
+  const strength = await buildCurrencyStrengthMap({ provider: "demo", interval: "1h", includeContext: false });
+  assert.equal(strength.enabled, false);
+  assert.equal(strength.currencies.length, 7);
 });
 
 test("research roadmap keeps safe output rules", () => {

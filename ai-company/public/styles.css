@@ -313,6 +313,127 @@ dl {
   margin: 0;
 }
 
+.guard-panel {
+  display: grid;
+  gap: 14px;
+}
+
+.guard-grid {
+  display: grid;
+  gap: 14px;
+  grid-template-columns: minmax(0, 1.2fr) minmax(0, 0.9fr) minmax(0, 0.9fr);
+}
+
+.guard-card {
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  display: grid;
+  gap: 10px;
+  min-width: 0;
+  padding: 14px;
+}
+
+.guard-card header {
+  align-items: center;
+  display: flex;
+  gap: 10px;
+  justify-content: space-between;
+}
+
+.guard-card strong {
+  font-size: 14px;
+}
+
+.guard-card span {
+  color: var(--accent);
+  font-weight: 800;
+  white-space: nowrap;
+}
+
+.guard-card p,
+.guard-card li {
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.55;
+}
+
+.mini-table {
+  max-height: 220px;
+}
+
+.mini-table table {
+  min-width: 720px;
+}
+
+.mini-table th,
+.mini-table td {
+  font-size: 12px;
+  padding: 7px 6px;
+}
+
+.currency-strength-panel {
+  border-top: 1px solid var(--line);
+  display: grid;
+  gap: 10px;
+  margin-top: 4px;
+  padding-top: 12px;
+}
+
+.currency-strength-panel[hidden] {
+  display: none;
+}
+
+.currency-strength-head {
+  align-items: center;
+  display: flex;
+  justify-content: space-between;
+}
+
+.currency-strength-head strong {
+  font-size: 14px;
+}
+
+.currency-strength-bars {
+  display: grid;
+  gap: 8px;
+}
+
+.currency-row {
+  align-items: center;
+  display: grid;
+  gap: 8px;
+  grid-template-columns: 46px minmax(0, 1fr) 76px;
+}
+
+.currency-code {
+  color: var(--text);
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.currency-track {
+  background: #edf1e8;
+  border-radius: 999px;
+  height: 10px;
+  overflow: hidden;
+}
+
+.currency-fill {
+  background: var(--accent);
+  display: block;
+  height: 100%;
+}
+
+.currency-fill.weak {
+  background: var(--danger);
+}
+
+.currency-score {
+  color: var(--muted);
+  font-size: 12px;
+  text-align: right;
+}
+
 .materials-panel {
   display: grid;
   gap: 14px;
@@ -423,7 +544,7 @@ ul {
 
 table {
   border-collapse: collapse;
-  min-width: 1080px;
+  min-width: 1280px;
   width: 100%;
 }
 
@@ -458,6 +579,7 @@ textarea {
   .scheduler-grid,
   .intelligence-grid,
   .factor-grid,
+  .guard-grid,
   .material-grid {
     grid-template-columns: 1fr;
   }
