@@ -54,6 +54,10 @@ const elements = {
   materialSummary: document.querySelector("#materialSummary"),
   materialCards: document.querySelector("#materialCards"),
   strategyPlaybook: document.querySelector("#strategyPlaybook"),
+  legendPlaybookScore: document.querySelector("#legendPlaybookScore"),
+  legendPlaybookSummary: document.querySelector("#legendPlaybookSummary"),
+  legendPlaybookCards: document.querySelector("#legendPlaybookCards"),
+  legendPlaybookNotes: document.querySelector("#legendPlaybookNotes"),
   explanation: document.querySelector("#explanation"),
   reasons: document.querySelector("#reasons"),
   warnings: document.querySelector("#warnings"),
@@ -405,6 +409,7 @@ function renderAnalysisMaterials(materials) {
     elements.materialSummary.innerHTML = "";
     elements.materialCards.innerHTML = "";
     elements.strategyPlaybook.innerHTML = "";
+    renderLegendPlaybooks(null);
     return;
   }
   elements.materialTimeframe.textContent = materials.timeframe?.label || TIMEFRAME_LABELS[state.timeframe] || state.timeframe;
@@ -424,6 +429,43 @@ function renderAnalysisMaterials(materials) {
     </article>
   `).join("");
   listItems(elements.strategyPlaybook, materials.playbook || []);
+  renderLegendPlaybooks(materials.legendPlaybooks);
+}
+
+function renderLegendPlaybooks(playbooks) {
+  if (!elements.legendPlaybookCards) return;
+  if (!playbooks) {
+    elements.legendPlaybookScore.textContent = "-";
+    elements.legendPlaybookSummary.textContent = "名トレーダーの考え方との一致を確認します。";
+    elements.legendPlaybookCards.innerHTML = "";
+    listItems(elements.legendPlaybookNotes, []);
+    return;
+  }
+
+  elements.legendPlaybookScore.textContent = `${playbooks.score}/100`;
+  elements.legendPlaybookSummary.textContent = playbooks.summary;
+  elements.legendPlaybookCards.innerHTML = (playbooks.cards || []).map((card) => `
+    <article class="legend-card">
+      <header>
+        <div>
+          <strong>${escapeHtml(card.trader)}</strong>
+          <p>${escapeHtml(card.method)}</p>
+        </div>
+        <span>${escapeHtml(card.score)}/100</span>
+      </header>
+      <div class="material-meter" aria-hidden="true">
+        <i style="width: ${Math.max(0, Math.min(100, card.score))}%"></i>
+      </div>
+      <dl>
+        <div><dt>判定</dt><dd>${escapeHtml(card.signal)}</dd></div>
+        <div><dt>一致</dt><dd>${escapeHtml(card.fit)}</dd></div>
+      </dl>
+      <p>${escapeHtml(card.detail)}</p>
+      <p>${escapeHtml(card.howToUse)}</p>
+      <small>${escapeHtml(card.caution)}</small>
+    </article>
+  `).join("");
+  listItems(elements.legendPlaybookNotes, playbooks.notes || []);
 }
 
 function renderExternalChart(symbol) {

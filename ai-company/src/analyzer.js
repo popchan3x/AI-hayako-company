@@ -8,6 +8,7 @@ import { assessDataQuality } from "./dataQuality.js";
 import { estimateTradingCosts } from "./costs.js";
 import { buildWorldClassIntelligence } from "./worldClassIntelligence.js";
 import { buildCurrencyStrengthMap, buildImportantEventFilter, buildMarketLinkageMap } from "./marketGuards.js";
+import { buildLegendTraderPlaybooks } from "./traderPlaybooks.js";
 
 const MIN_CANDLES = 90;
 const DIRECTIONS = ["買い", "売り", "見送り"];
@@ -183,7 +184,7 @@ function scoreFromDistance(value, center, width) {
   return clamp(Math.round(100 - Math.abs(value - center) * width), 0, 100);
 }
 
-function buildAnalysisMaterials(features, tournament, regime, dataQuality, costs, timeframe, marketLinkage, eventFilter) {
+function buildAnalysisMaterials(features, tournament, regime, dataQuality, costs, timeframe, marketLinkage, eventFilter, legendPlaybooks) {
   const leader = tournament[0];
   const trendScore = features.sma20 > features.sma50 ? 72 : 48;
   const momentumScore = scoreFromDistance(features.rsi14 || 50, 58, 2.2);
@@ -203,8 +204,9 @@ function buildAnalysisMaterials(features, tournament, regime, dataQuality, costs
     summary: [
       "価格の方向、勢い、荒さ、出来高、節目、モデル大会、コスト、データ品質を同時に見ています。",
       "AIは売買を直感で決めず、数字の矛盾チェックとシナリオ整理に使います。",
-      "有料級ツールの考え方に合わせ、見た目、根拠、検証結果、注意点を1画面に集約します。"
-    ],
+      "有料級ツールの考え方に合わせ、見た目、根拠、検証結果、注意点を1画面に集約します。",
+      legendPlaybooks ? `世界的トレーダー6組の考え方との一致度は${legendPlaybooks.score}/100です。` : null
+    ].filter(Boolean),
     cards: [
       { name: "トレンド", score: trendScore, detail: `20本平均と50本平均の位置を確認。現在は${features.sma20 > features.sma50 ? "上向き寄り" : "下向きまたは横ばい寄り"}です。` },
       { name: "勢い", score: momentumScore, detail: `RSIは${round(features.rsi14, 1)}です。買われすぎ、売られすぎ、伸び余地を見ます。` },
@@ -215,14 +217,17 @@ function buildAnalysisMaterials(features, tournament, regime, dataQuality, costs
       { name: "コスト", score: clamp(100 - costs.totalBps * 8, 0, 100), detail: `想定コストは${costs.totalBps}bpです。短期足ほど重く見ます。` },
       { name: "市場連動", score: marketLinkage?.score ?? 50, detail: marketLinkage?.summary || "周辺市場の確認は個別分析で行います。" },
       { name: "重要予定", score: eventFilter?.score ?? 100, detail: eventFilter?.warnings?.[0] || "直近の警戒時間はありません。" },
-      { name: "データ品質", score: dataQuality.score, detail: `${dataQuality.decision} ${dataQuality.score}/100です。欠損や遅延がある時は見送りを強めます。` }
-    ],
+      { name: "データ品質", score: dataQuality.score, detail: `${dataQuality.decision} ${dataQuality.score}/100です。欠損や遅延がある時は見送りを強めます。` },
+      legendPlaybooks ? { name: "巨匠手法", score: legendPlaybooks.score, detail: legendPlaybooks.summary } : null
+    ].filter(Boolean),
+    legendPlaybooks,
     playbook: [
+      legendPlaybooks ? `巨匠手法では、${legendPlaybooks.cards[0].trader}、${legendPlaybooks.cards[1].trader}など6組の型と照合します。` : null,
       `${regime.name}では、主役モデルだけでなくモデル一致度を重視します。`,
       "市場連動、重要予定、データ品質の3つで危険なシグナルをふるい落とします。",
       "入口、損切り、利確はチャートの水平線で確認します。",
       "短期足で方向が出ても、日足の大きな流れと逆ならサイズを小さく扱います。"
-    ]
+    ].filter(Boolean)
   };
 }
 
@@ -388,6 +393,15 @@ export async function analyzeSymbol(symbol, options = {}) {
     validationLabel: "検証用シグナル",
     warnings: buildWarnings(features, warning, regime, dataQuality, costs, marketLinkage, eventFilter)
   };
+  signal.legendPlaybooks = buildLegendTraderPlaybooks({
+    asset,
+    candles,
+    features,
+    signal,
+    tournament,
+    regime,
+    dataQuality
+  });
   signal.intelligence = buildWorldClassIntelligence({
     asset,
     signal,
@@ -395,7 +409,8 @@ export async function analyzeSymbol(symbol, options = {}) {
     tournament,
     regime,
     dataQuality,
-    costs
+    costs,
+    legendPlaybooks: signal.legendPlaybooks
   });
   signal.explanation = buildAiExplanation(asset, signal, features);
   signal.xDraft = buildXDraft(asset, signal);
@@ -410,7 +425,7 @@ export async function analyzeSymbol(symbol, options = {}) {
     timeframe: TIMEFRAMES[interval],
     candles: candles.slice(-180),
     signal,
-    analysisMaterials: buildAnalysisMaterials(features, tournament, regime, dataQuality, costs, interval, marketLinkage, eventFilter),
+    analysisMaterials: buildAnalysisMaterials(features, tournament, regime, dataQuality, costs, interval, marketLinkage, eventFilter, signal.legendPlaybooks),
     features: {
       close: round(features.close, 4),
       sma20: round(features.sma20, 4),

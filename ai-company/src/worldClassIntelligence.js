@@ -26,7 +26,7 @@ function tournamentStrength(tournament) {
   );
 }
 
-function factorScores({ signal, features, tournament, regime, dataQuality, costs }) {
+function factorScores({ signal, features, tournament, regime, dataQuality, costs, legendPlaybooks }) {
   const atrPercent = features.atr14 && features.close ? (features.atr14 / features.close) * 100 : 0;
   const trendScore = clamp(50 + regime.trendStrength * 12 + Math.abs(features.slope24 / features.close) * 12000);
   const momentumScore = features.rsi14 === null
@@ -40,6 +40,7 @@ function factorScores({ signal, features, tournament, regime, dataQuality, costs
   const dataScore = clamp(dataQuality.score);
   const marketLinkScore = clamp(signal.marketLinkage?.score ?? 50);
   const eventScore = clamp(signal.eventFilter?.score ?? 100);
+  const legendScore = clamp(legendPlaybooks?.score ?? signal.legendPlaybooks?.score ?? 50);
 
   return [
     { name: "データ品質", score: dataScore, detail: `${dataQuality.bars}本、品質${dataQuality.score}/100` },
@@ -51,6 +52,7 @@ function factorScores({ signal, features, tournament, regime, dataQuality, costs
     { name: "勢い", score: momentumScore, detail: `RSI ${round(features.rsi14, 1)}` },
     { name: "値動き", score: volatilityScore, detail: `値動き幅${round(atrPercent, 2)}%` },
     { name: "売買しやすさ", score: liquidityScore, detail: `出来高倍率${round(features.volumeRatio, 2)}、費用${costs.totalBps}bp` },
+    { name: "巨匠手法", score: legendScore, detail: legendPlaybooks?.summary || signal.legendPlaybooks?.summary || "名トレーダーの考え方との一致を確認します。" },
     { name: "守り", score: riskScore, detail: `リスク水準${regime.riskLevel}` }
   ].map((item) => ({ ...item, score: Math.round(clamp(item.score)) }));
 }
@@ -66,6 +68,7 @@ function weightedEdgeScore(factors) {
     "勢い": 0.75,
     "値動き": 0.75,
     "売買しやすさ": 0.9,
+    "巨匠手法": 1.05,
     "守り": 1.1
   };
   const totalWeight = factors.reduce((sum, factor) => sum + (weights[factor.name] || 1), 0);

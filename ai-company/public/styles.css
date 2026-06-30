@@ -501,6 +501,63 @@ dl {
   gap: 4px;
 }
 
+.legend-panel {
+  display: grid;
+  gap: 14px;
+}
+
+.legend-grid {
+  display: grid;
+  gap: 12px;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.legend-card {
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  display: grid;
+  gap: 10px;
+  min-width: 0;
+  padding: 14px;
+}
+
+.legend-card header {
+  align-items: flex-start;
+  display: flex;
+  gap: 12px;
+  justify-content: space-between;
+}
+
+.legend-card strong {
+  display: block;
+  font-size: 14px;
+  margin-bottom: 5px;
+}
+
+.legend-card header p,
+.legend-card > p,
+.legend-card small {
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.55;
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
+.legend-card span {
+  color: var(--accent);
+  font-weight: 800;
+  white-space: nowrap;
+}
+
+.legend-card dl {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.legend-card dd {
+  font-size: 15px;
+}
+
 dt {
   color: var(--muted);
   font-size: 12px;
@@ -580,7 +637,8 @@ textarea {
   .intelligence-grid,
   .factor-grid,
   .guard-grid,
-  .material-grid {
+  .material-grid,
+  .legend-grid {
     grid-template-columns: 1fr;
   }
 

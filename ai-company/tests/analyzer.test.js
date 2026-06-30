@@ -62,7 +62,11 @@ test("analyzer returns priced validation signal with regime and meta model", asy
   assert.equal(typeof result.signal.intelligence.edgeScore, "number");
   assert.equal(result.signal.intelligence.autoTradeGate.canAutoTrade, false);
   assert.equal(result.signal.intelligence.sourceSafety.noExternalCodeExecuted, true);
-  assert.ok(result.signal.intelligence.factors.length >= 10);
+  assert.ok(result.signal.intelligence.factors.length >= 11);
+  assert.equal(typeof result.signal.legendPlaybooks.score, "number");
+  assert.equal(result.signal.legendPlaybooks.cards.length, 6);
+  assert.ok(result.signal.legendPlaybooks.cards.some((card) => card.trader.includes("Turtle")));
+  assert.ok(result.signal.intelligence.factors.some((factor) => factor.name === "巨匠手法"));
   assert.ok(result.signal.intelligence.externalSignals.length >= 5);
   assert.ok(result.signal.scenarios.length >= 3);
   assert.ok(result.signal.riskSummary.length >= 4);
@@ -226,8 +230,10 @@ test("analyzer returns timeframe and visible analysis materials", async () => {
   assert.equal(result.interval, "5m");
   assert.equal(result.timeframe.label, "5分");
   assert.ok(result.candles.length <= 180);
-  assert.ok(result.analysisMaterials.cards.length >= 8);
-  assert.ok(result.analysisMaterials.summary.length >= 3);
+  assert.ok(result.analysisMaterials.cards.length >= 11);
+  assert.ok(result.analysisMaterials.cards.some((card) => card.name === "巨匠手法"));
+  assert.equal(result.analysisMaterials.legendPlaybooks.cards.length, 6);
+  assert.ok(result.analysisMaterials.summary.length >= 4);
 });
 
 test("data quality score explains freshness, shape, and continuity", () => {
