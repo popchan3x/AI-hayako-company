@@ -8,7 +8,7 @@ import { runDailyLearning } from "../src/learning.js";
 import { auditUniverse, classifyDataStatus, UNIVERSE_STATUS } from "../src/universeAudit.js";
 import { assessDataQuality } from "../src/dataQuality.js";
 import { buildCurrencyStrengthMap, buildImportantEventFilter } from "../src/marketGuards.js";
-import { mkdtemp } from "node:fs/promises";
+import { mkdtemp, readFile } from "node:fs/promises";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
 
@@ -300,6 +300,32 @@ test("daily learning stores one signal per asset without duplicate same-day reco
   assert.equal(second.totals.newSignals, 0);
   assert.equal(second.totals.signals, expected);
   assert.ok(second.totals.pendingOutcomes >= 0);
+});
+
+test("daily learning can save signals and summary before outcome evaluation", async () => {
+  const learningDir = await mkdtemp(join(tmpdir(), "market-ai-learning-staged-"));
+  const expected = listAssets().length;
+  const signalsOnly = await runDailyLearning({
+    provider: "demo",
+    learningDir,
+    date: "2026-06-28",
+    stage: "signals"
+  });
+  const savedSummary = JSON.parse(await readFile(join(learningDir, "learning-summary.json"), "utf8"));
+  assert.equal(signalsOnly.totals.newSignals, expected);
+  assert.equal(signalsOnly.totals.signals, expected);
+  assert.equal(signalsOnly.totals.newOutcomes, 0);
+  assert.equal(savedSummary.totals.newSignals, expected);
+  assert.equal(savedSummary.totals.newOutcomes, 0);
+
+  const outcomesOnly = await runDailyLearning({
+    provider: "demo",
+    learningDir,
+    date: "2026-06-28",
+    stage: "outcomes"
+  });
+  assert.equal(outcomesOnly.totals.newSignals, 0);
+  assert.equal(outcomesOnly.totals.signals, expected);
 });
 
 test("universe audit can write a prioritized report", async () => {

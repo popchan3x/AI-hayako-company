@@ -38,7 +38,11 @@ async function appendJsonl(path, rows) {
 }
 
 function signalKey(record) {
-  return `${record.date}|${record.provider}|${record.interval}|${record.symbol}`;
+  return signalKeyFor(record.date, record.provider, record.interval, record.symbol);
+}
+
+function signalKeyFor(date, provider, interval, symbol) {
+  return `${date}|${provider}|${interval}|${symbol}`;
 }
 
 function outcomeKey(signal, horizon) {
@@ -209,6 +213,13 @@ function buildSummary(signals, outcomes, created, evaluated, provider, intervals
   };
 }
 
+async function writeLearningSummary(paths, signals, outcomes, created, evaluated, provider, intervals) {
+  const summary = buildSummary(signals, outcomes, created, evaluated, provider, intervals);
+  await writeFile(paths.summaryPath, JSON.stringify(summary, null, 2), "utf8");
+  await writeFile(paths.summaryMdPath, summaryMarkdown(summary), "utf8");
+  return summary;
+}
+
 function summaryMarkdown(summary) {
   const topModel = summary.byModel[0];
   const topTimeframe = summary.byTimeframe?.[0];
@@ -232,61 +243,80 @@ function summaryMarkdown(summary) {
 export async function runDailyLearning(options = {}) {
   const provider = options.provider || "demo";
   const intervals = (options.intervals?.length ? options.intervals : ["1d"]).map(normalizeTimeframe);
+  const stage = options.stage || "all";
+  if (!["all", "signals", "outcomes"].includes(stage)) {
+    throw new Error(`Unsupported learning stage: ${stage}`);
+  }
   const learningDir = options.learningDir || defaultLearningDir;
   const date = options.date || isoDateJst();
-  const signalsPath = join(learningDir, "signals.jsonl");
-  const outcomesPath = join(learningDir, "outcomes.jsonl");
-  const summaryPath = join(learningDir, "learning-summary.json");
-  const summaryMdPath = join(learningDir, "learning-summary.md");
+  const paths = {
+    signalsPath: join(learningDir, "signals.jsonl"),
+    outcomesPath: join(learningDir, "outcomes.jsonl"),
+    summaryPath: join(learningDir, "learning-summary.json"),
+    summaryMdPath: join(learningDir, "learning-summary.md")
+  };
 
   await mkdir(learningDir, { recursive: true });
-  const existingSignals = await readJsonl(signalsPath);
+  const existingSignals = await readJsonl(paths.signalsPath);
   const existingKeys = new Set(existingSignals.map(signalKey));
   const created = [];
 
-  for (const interval of intervals) {
-    for (const asset of listAssets()) {
-      const result = await analyzeSymbol(asset.symbol, { provider, interval });
-      if (!result.ok) continue;
-      const record = buildSignalRecord(result, provider, date, interval);
-      if (!existingKeys.has(signalKey(record))) {
-        created.push(record);
-        existingKeys.add(signalKey(record));
+  if (stage !== "outcomes") {
+    for (const interval of intervals) {
+      for (const asset of listAssets()) {
+        const expectedKey = signalKeyFor(date, provider, interval, asset.symbol);
+        if (existingKeys.has(expectedKey)) continue;
+        const result = await analyzeSymbol(asset.symbol, { provider, interval });
+        if (!result.ok) continue;
+        const record = buildSignalRecord(result, provider, date, interval);
+        if (!existingKeys.has(signalKey(record))) {
+          created.push(record);
+          existingKeys.add(signalKey(record));
+        }
       }
     }
+
+    await appendJsonl(paths.signalsPath, created);
   }
 
-  await appendJsonl(signalsPath, created);
   const allSignals = [...existingSignals, ...created];
-  const existingOutcomes = await readJsonl(outcomesPath);
+  const existingOutcomes = await readJsonl(paths.outcomesPath);
+
+  if (stage === "signals") {
+    return writeLearningSummary(paths, allSignals, existingOutcomes, created, [], provider, intervals);
+  }
+
+  await writeLearningSummary(paths, allSignals, existingOutcomes, created, [], provider, intervals);
+
   const existingOutcomeKeys = new Set(existingOutcomes.map((outcome) => outcome.id));
   const evaluated = [];
   const candlesBySymbol = new Map();
+  const intervalSet = new Set(intervals);
 
   for (const signal of allSignals) {
     const interval = normalizeTimeframe(signal.interval || "1d");
+    if (!intervalSet.has(interval)) continue;
+    const pendingHorizons = horizons.filter((horizon) => !existingOutcomeKeys.has(outcomeKey(signal, horizon)));
+    if (pendingHorizons.length === 0) continue;
     const candleKey = `${signal.symbol}|${signal.provider}|${interval}`;
     if (!candlesBySymbol.has(candleKey)) {
       candlesBySymbol.set(candleKey, await getCandles({ symbol: signal.symbol, provider: signal.provider, interval }));
     }
     const { candles } = candlesBySymbol.get(candleKey);
-    for (const horizon of horizons) {
-      const key = outcomeKey(signal, horizon);
-      if (existingOutcomeKeys.has(key)) continue;
+    const currentEvaluated = [];
+    for (const horizon of pendingHorizons) {
       const outcome = evaluateSignal(signal, candles, horizon);
       if (outcome) {
-        evaluated.push(outcome);
-        existingOutcomeKeys.add(key);
+        currentEvaluated.push(outcome);
+        existingOutcomeKeys.add(outcome.id);
       }
     }
+    await appendJsonl(paths.outcomesPath, currentEvaluated);
+    evaluated.push(...currentEvaluated);
   }
 
-  await appendJsonl(outcomesPath, evaluated);
   const allOutcomes = [...existingOutcomes, ...evaluated];
-  const summary = buildSummary(allSignals, allOutcomes, created, evaluated, provider, intervals);
-  await writeFile(summaryPath, JSON.stringify(summary, null, 2), "utf8");
-  await writeFile(summaryMdPath, summaryMarkdown(summary), "utf8");
-  return summary;
+  return writeLearningSummary(paths, allSignals, allOutcomes, created, evaluated, provider, intervals);
 }
 
 export async function readLearningSummary(options = {}) {
