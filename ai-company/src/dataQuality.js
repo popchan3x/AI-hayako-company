@@ -80,6 +80,7 @@ function decisionFromScore(score) {
 export function assessDataQuality(candles, source, options = {}) {
   const requiredBars = options.requiredBars || DEFAULT_REQUIRED_BARS;
   const interval = options.interval || "1d";
+  const isFx = options.assetGroup === "FX";
   const issues = [];
   if (!Array.isArray(candles) || candles.length === 0) {
     return {
@@ -138,7 +139,7 @@ export function assessDataQuality(candles, source, options = {}) {
     : clamp(100 - Math.max(0, staleHours - freshnessLimit) * 1.8);
   const shapeScore = clamp(100 - invalidBars * 18 - duplicateTimes * 8 - timeOrderBreaks * 35);
   const continuityScore = clamp(100 - gapCount * 12 - outlierBars * 18);
-  const volumeScore = candles.length === 0 ? 0 : clamp(100 - (zeroVolumeBars / candles.length) * 80);
+  const volumeScore = isFx || candles.length === 0 ? 100 : clamp(100 - (zeroVolumeBars / candles.length) * 80);
 
   let score = Math.round(
     fetchScore * 0.2

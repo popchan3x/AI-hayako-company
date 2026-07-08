@@ -195,6 +195,14 @@ export function resolveYahooSymbol(asset) {
   return asset.symbol;
 }
 
+function normalizeYahooCandle(candle) {
+  return {
+    ...candle,
+    high: Math.max(candle.open, candle.high, candle.close),
+    low: Math.min(candle.open, candle.low, candle.close)
+  };
+}
+
 function parseYahooChart(payload) {
   const result = payload?.chart?.result?.[0];
   const timestamps = result?.timestamp || [];
@@ -212,7 +220,7 @@ function parseYahooChart(payload) {
     && Number.isFinite(candle.low)
     && Number.isFinite(candle.close)
     && candle.close > 0
-  ));
+  )).map(normalizeYahooCandle);
 }
 
 export async function fetchStooqCandles(symbol, options = {}) {

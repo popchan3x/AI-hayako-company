@@ -1,5 +1,6 @@
 import { spawn } from "node:child_process";
 import { fileURLToPath } from "node:url";
+import { normalizeTimeframe } from "../src/dataProvider.js";
 import { runDailyLearning } from "../src/learning.js";
 
 const args = process.argv.slice(2);
@@ -15,7 +16,7 @@ function hasFlag(name) {
 }
 
 function parseIntervals(value) {
-  return value ? value.split(",").map((item) => item.trim()).filter(Boolean) : undefined;
+  return value ? value.split(",").map((item) => normalizeTimeframe(item.trim())).filter(Boolean) : undefined;
 }
 
 function parseTimeout(name, fallback) {
@@ -91,7 +92,7 @@ function runInterval(interval, timeoutMs) {
 
 async function runSplitByInterval({ provider, intervals, stage }) {
   const normalTimeoutMs = parseTimeout("interval-timeout-ms", 240000);
-  const oneDayTimeoutMs = parseTimeout("interval-timeout-1d-ms", 300000);
+  const oneDayTimeoutMs = parseTimeout("interval-timeout-1d-ms", 600000);
   const runs = [];
   let latestSummary = null;
 

@@ -357,7 +357,7 @@ export async function analyzeSymbol(symbol, options = {}) {
     provider: options.provider || "demo",
     interval
   });
-  const dataQuality = assessDataQuality(candles, source, { interval, requiredBars: MIN_CANDLES });
+  const dataQuality = assessDataQuality(candles, source, { interval, requiredBars: MIN_CANDLES, assetGroup: asset.group });
 
   if (!candles || candles.length < MIN_CANDLES || !dataQuality.usable) {
     return {

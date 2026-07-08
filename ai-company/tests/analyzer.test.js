@@ -113,6 +113,32 @@ test("free data providers map symbols and parse yahoo chart payload", async () =
   assert.equal(result.candles[1].close, 102);
 });
 
+test("yahoo provider normalizes rounded OHLC inconsistencies", async () => {
+  const yahooPayload = {
+    chart: {
+      result: [{
+        timestamp: [1767225600],
+        indicators: {
+          quote: [{
+            open: [148.0030059814453],
+            high: [149.01400756835938],
+            low: [148.00599670410156],
+            close: [148.0030059814453],
+            volume: [0]
+          }]
+        }
+      }],
+      error: null
+    }
+  };
+  const fetchImpl = async () => new Response(JSON.stringify(yahooPayload), { status: 200 });
+  const result = await fetchYahooCandles("USDJPY", { fetchImpl });
+  assert.equal(result.candles.length, 1);
+  assert.equal(result.candles[0].high, 149.01400756835938);
+  assert.equal(result.candles[0].low, 148.0030059814453);
+});
+
+
 test("yahoo provider supports intraday timeframes and aggregates 4 hour candles", async () => {
   const timestamps = Array.from({ length: 8 }, (_, index) => 1767225600 + index * 3600);
   const yahooPayload = {
@@ -245,6 +271,21 @@ test("data quality score explains freshness, shape, and continuity", () => {
   assert.ok(quality.score < 90);
   assert.ok(quality.components.length >= 6);
   assert.ok(quality.issues.some((issue) => issue.includes("壊れている")));
+});
+
+test("data quality accepts zero volume for FX candles", () => {
+  const candles = generateDemoCandles("USDJPY", 120, "1d").map((candle) => ({
+    ...candle,
+    volume: 0
+  }));
+  const quality = assessDataQuality(candles, "free-yahoo", {
+    interval: "1d",
+    requiredBars: 90,
+    assetGroup: "FX"
+  });
+  assert.equal(quality.zeroVolumeBars, 120);
+  assert.equal(quality.usable, true);
+  assert.ok(quality.score >= 90);
 });
 
 test("important event filter warns inside recurring US data window", () => {
