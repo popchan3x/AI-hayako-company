@@ -1,14 +1,14 @@
 {
-  "generatedAt": "2026-07-09T11:35:54.802Z",
+  "generatedAt": "2026-07-12T06:17:18.305Z",
   "provider": "free-composite",
   "intervals": [
-    "4h"
+    "1d"
   ],
   "totals": {
     "signals": 3341,
     "newSignals": 0,
     "outcomes": 9512,
-    "newOutcomes": 309,
+    "newOutcomes": 0,
     "pendingOutcomes": 511
   },
   "byModel": [
