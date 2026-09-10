@@ -1,0 +1,343 @@
+<!doctype html>
+<html lang="ja">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Hayako Market AI</title>
+    <link rel="stylesheet" href="/styles.css">
+  </head>
+  <body>
+    <header class="topbar">
+      <div>
+        <p class="eyebrow">検証用シグナル</p>
+        <h1>Hayako Market AI</h1>
+      </div>
+      <div class="status" id="status">準備中</div>
+    </header>
+
+    <main class="layout">
+      <aside class="sidebar">
+        <label for="assetSelect">分析対象</label>
+        <select id="assetSelect"></select>
+
+        <label for="providerSelect">データ</label>
+        <select id="providerSelect">
+          <option value="demo">デモデータ</option>
+          <option value="free-composite">無料データ（自動切替）</option>
+          <option value="free-stooq">無料データ（Stooqのみ）</option>
+          <option value="free-yahoo">無料データ（Yahooのみ）</option>
+        </select>
+
+        <label>時間足</label>
+        <div class="timeframe-tabs" id="timeframeTabs" role="group" aria-label="時間足">
+          <button type="button" data-timeframe="1m">1分</button>
+          <button type="button" data-timeframe="5m">5分</button>
+          <button type="button" data-timeframe="15m">15分</button>
+          <button type="button" data-timeframe="1h" class="active">1時間</button>
+          <button type="button" data-timeframe="4h">4時間</button>
+          <button type="button" data-timeframe="1d">日足</button>
+        </div>
+
+        <button id="analyzeButton" type="button">分析</button>
+        <button id="scanButton" type="button" class="secondary">全体スキャン</button>
+        <button id="learnButton" type="button" class="secondary">日次学習</button>
+
+        <section class="panel compact">
+          <h2>対象範囲</h2>
+          <p>米国株、主要指数、FX、XAUUSD、XAGUSD、XPTUSD</p>
+        </section>
+
+        <section class="panel compact data-note">
+          <h2>データ説明</h2>
+          <p id="providerHelp">デモデータは画面確認と検証用の仮データです。</p>
+        </section>
+      </aside>
+
+      <section class="workspace">
+        <section class="signal-grid">
+          <div class="panel signal">
+            <p class="eyebrow">売買方向</p>
+            <h2 id="direction">-</h2>
+            <dl>
+              <div><dt>信頼度</dt><dd id="confidence">-</dd></div>
+              <div><dt>入口</dt><dd id="entryPrice">-</dd></div>
+              <div><dt>損切り</dt><dd id="stopLoss">-</dd></div>
+              <div><dt>利確</dt><dd id="takeProfit">-</dd></div>
+              <div><dt>相場環境</dt><dd id="regime">-</dd></div>
+              <div><dt>選択モデル</dt><dd id="selectedModel">-</dd></div>
+              <div><dt>一致度</dt><dd id="modelAgreement">-</dd></div>
+              <div><dt>データ品質</dt><dd id="dataQuality">-</dd></div>
+              <div><dt>売買コスト</dt><dd id="tradingCost">-</dd></div>
+              <div><dt>投票比率</dt><dd id="voteWeights">-</dd></div>
+            </dl>
+          </div>
+
+          <div class="panel">
+            <p class="eyebrow">AI説明</p>
+            <p id="explanation">分析を実行してください。</p>
+          </div>
+        </section>
+
+        <section class="panel intelligence-panel">
+          <div class="panel-title-row">
+            <div>
+              <p class="eyebrow">最高級分析</p>
+              <h2>World Class Intelligence</h2>
+            </div>
+            <div class="gate" id="autoTradeGate">-</div>
+          </div>
+
+          <dl class="intelligence-grid">
+            <div><dt>勝ち筋スコア</dt><dd id="intelligenceScore">-</dd></div>
+            <div><dt>実運用準備度</dt><dd id="readinessScore">-</dd></div>
+            <div><dt>総合判定</dt><dd id="intelligenceVerdict">-</dd></div>
+          </dl>
+
+          <div class="factor-grid" id="factorScores"></div>
+        </section>
+
+        <section class="panel tradingview-panel">
+          <div class="panel-title-row">
+            <div>
+              <p class="eyebrow">公式チャート</p>
+              <h2>TradingView</h2>
+            </div>
+            <div class="source-pill" id="externalChartStatus">-</div>
+          </div>
+          <div class="external-chart-shell" id="externalChart" aria-label="TradingView chart"></div>
+        </section>
+
+        <section class="chart-band">
+          <canvas id="priceChart" width="1100" height="360"></canvas>
+        </section>
+
+        <section class="panel guard-panel">
+          <div class="panel-title-row">
+            <div>
+              <p class="eyebrow">安全フィルター</p>
+              <h2>市場連動・重要予定・品質</h2>
+            </div>
+            <div class="source-pill" id="guardSummary">-</div>
+          </div>
+          <div class="guard-grid">
+            <article class="guard-card">
+              <header>
+                <strong>市場連動マップ</strong>
+                <span id="marketMapScore">-</span>
+              </header>
+              <p id="marketMapSummary">周辺市場の確認を待っています。</p>
+              <div class="table-wrap mini-table">
+                <table class="compact-table">
+                  <thead>
+                    <tr>
+                      <th>材料</th>
+                      <th>判定</th>
+                      <th>なぜそう見るか</th>
+                    </tr>
+                  </thead>
+                  <tbody id="marketMapDrivers"></tbody>
+                </table>
+              </div>
+              <div class="currency-strength-panel" id="currencyStrengthPanel" hidden>
+                <div class="currency-strength-head">
+                  <strong>主要7通貨 強弱マップ</strong>
+                  <span id="currencyStrengthStatus">-</span>
+                </div>
+                <p id="currencyStrengthSummary">FXを選ぶと表示します。</p>
+                <div class="currency-strength-bars" id="currencyStrengthBars"></div>
+                <ul id="currencyStrengthNotes"></ul>
+              </div>
+            </article>
+
+            <article class="guard-card">
+              <header>
+                <strong>重要予定フィルター</strong>
+                <span id="eventFilterScore">-</span>
+              </header>
+              <p id="eventFilterSummary">警戒時間の確認を待っています。</p>
+              <ul id="eventFilterEvents"></ul>
+            </article>
+
+            <article class="guard-card">
+              <header>
+                <strong>データ品質スコア</strong>
+                <span id="qualityGateScore">-</span>
+              </header>
+              <p id="qualityGateSummary">データ品質の確認を待っています。</p>
+              <ul id="qualityGateIssues"></ul>
+            </article>
+          </div>
+        </section>
+
+        <section class="panel materials-panel">
+          <div class="panel-title-row">
+            <div>
+              <p class="eyebrow">分析材料</p>
+              <h2>何を見ているか</h2>
+            </div>
+            <div class="source-pill" id="materialTimeframe">-</div>
+          </div>
+          <div class="material-summary" id="materialSummary"></div>
+          <div class="material-grid" id="materialCards"></div>
+          <ul class="playbook-list" id="strategyPlaybook"></ul>
+        </section>
+
+        <section class="panel legend-panel">
+          <div class="panel-title-row">
+            <div>
+              <p class="eyebrow">巨匠研究</p>
+              <h2>世界的トレーダー手法</h2>
+            </div>
+            <div class="source-pill" id="legendPlaybookScore">-</div>
+          </div>
+          <p class="section-note" id="legendPlaybookSummary">名トレーダーの考え方との一致を確認します。</p>
+          <div class="legend-grid" id="legendPlaybookCards"></div>
+          <ul class="playbook-list" id="legendPlaybookNotes"></ul>
+        </section>
+
+        <section class="columns">
+          <div class="panel">
+            <h2>根拠</h2>
+            <ul id="reasons"></ul>
+          </div>
+          <div class="panel">
+            <h2>注意点</h2>
+            <ul id="warnings"></ul>
+          </div>
+        </section>
+
+        <section class="columns">
+          <div class="panel">
+            <h2>シナリオ</h2>
+            <ul id="scenarios"></ul>
+          </div>
+          <div class="panel">
+            <h2>リスク概要</h2>
+            <ul id="riskSummary"></ul>
+          </div>
+        </section>
+
+        <section class="columns">
+          <div class="panel">
+            <h2>まだ弱い部分</h2>
+            <ul id="blindSpots"></ul>
+          </div>
+          <div class="panel">
+            <h2>次に足すデータ</h2>
+            <ul id="dataUpgrades"></ul>
+          </div>
+        </section>
+
+        <section class="panel">
+          <h2>外部データ接続マップ</h2>
+          <div class="table-wrap">
+            <table class="compact-table">
+              <thead>
+                <tr>
+                  <th>データ</th>
+                  <th>状態</th>
+                  <th>使い道</th>
+                </tr>
+              </thead>
+              <tbody id="externalSignals"></tbody>
+            </table>
+          </div>
+        </section>
+
+        <section class="panel">
+          <h2>モデル大会</h2>
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>モデル</th>
+                  <th>方向</th>
+                  <th>信頼度</th>
+                  <th>取引数</th>
+                  <th>勝率</th>
+                  <th>期待値</th>
+                  <th>損益比</th>
+                  <th>損益</th>
+                  <th>最大下落</th>
+                  <th>連敗</th>
+                  <th>点数</th>
+                </tr>
+              </thead>
+              <tbody id="tournament"></tbody>
+            </table>
+          </div>
+        </section>
+
+        <section class="panel">
+          <h2>全体スキャン</h2>
+          <p class="section-note">監視対象を一括で分析し、今見るべき候補を信頼度順に並べます。1銘柄を深掘りする前の一覧チェックです。</p>
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>対象</th>
+                  <th>方向</th>
+                  <th>信頼度</th>
+                  <th>相場環境</th>
+                  <th>主導モデル</th>
+                  <th>一致度</th>
+                  <th>勝ち筋</th>
+                  <th>自動売買</th>
+                  <th>市場連動</th>
+                  <th>予定</th>
+                  <th>品質</th>
+                  <th>コスト</th>
+                </tr>
+              </thead>
+              <tbody id="scanTable"></tbody>
+            </table>
+          </div>
+        </section>
+
+        <section class="panel">
+          <h2>学習記録</h2>
+          <p class="section-note">Codexの日次学習をこのサイトへ統合しました。毎日9:00以降、サイト起動中に6時間足を自動実行し、起動が遅れた日も当日分を追いつき実行します。</p>
+          <dl class="learning-grid">
+            <div><dt>累計シグナル</dt><dd id="learningSignals">0</dd></div>
+            <div><dt>答え合わせ</dt><dd id="learningOutcomes">0</dd></div>
+            <div><dt>未評価</dt><dd id="learningPending">0</dd></div>
+            <div><dt>本日追加</dt><dd id="learningNewSignals">0</dd></div>
+          </dl>
+          <dl class="scheduler-grid">
+            <div><dt>自動学習</dt><dd id="schedulerStatus">-</dd></div>
+            <div><dt>実行時刻</dt><dd id="schedulerTime">-</dd></div>
+            <div><dt>対象時間足</dt><dd id="schedulerIntervals">-</dd></div>
+            <div><dt>データ</dt><dd id="schedulerProvider">-</dd></div>
+            <div><dt>最終結果</dt><dd id="schedulerLastResult">-</dd></div>
+            <div><dt>最終完了</dt><dd id="schedulerLastRun">-</dd></div>
+            <div><dt>今回の追加</dt><dd id="schedulerLastAdded">-</dd></div>
+            <div><dt>サイト内レポート</dt><dd id="schedulerReport">-</dd></div>
+          </dl>
+          <p id="schedulerError" class="scheduler-error" hidden></p>
+          <div class="archive-panel">
+            <div class="archive-heading">
+              <strong>Codex過去学習データ</strong>
+              <span id="archiveStatus" class="archive-badge">確認中</span>
+            </div>
+            <dl class="archive-grid">
+              <div><dt>統合期間</dt><dd id="archivePeriod">-</dd></div>
+              <div><dt>過去レポート</dt><dd id="archiveReports">-</dd></div>
+              <div><dt>採用データ</dt><dd id="archiveRows">-</dd></div>
+              <div><dt>重複監視</dt><dd id="archiveDuplicates">-</dd></div>
+            </dl>
+            <p class="section-note archive-note">Codexが蓄積したシグナルと答え合わせを、そのままサイトの累積学習データとして使用します。</p>
+            <ul id="archiveRecentReports" class="archive-reports"></ul>
+          </div>
+          <ul id="learningActions"></ul>
+        </section>
+
+        <section class="panel">
+          <h2>X投稿用下書き</h2>
+          <textarea id="xDraft" readonly></textarea>
+        </section>
+      </section>
+    </main>
+
+    <script src="/app.js"></script>
+  </body>
+</html>
