@@ -41,12 +41,14 @@ function factorScores({ signal, features, tournament, regime, dataQuality, costs
   const marketLinkScore = clamp(signal.marketLinkage?.score ?? 50);
   const eventScore = clamp(signal.eventFilter?.score ?? 100);
   const legendScore = clamp(legendPlaybooks?.score ?? signal.legendPlaybooks?.score ?? 50);
+  const profitScore = clamp(signal.profitDiscipline?.score ?? 50);
 
   return [
     { name: "データ品質", score: dataScore, detail: `${dataQuality.bars}本、品質${dataQuality.score}/100` },
     { name: "市場連動", score: marketLinkScore, detail: signal.marketLinkage?.summary || "周辺市場は未評価です。" },
     { name: "重要予定", score: eventScore, detail: signal.eventFilter?.warnings?.[0] || "重要予定の警戒はありません。" },
     { name: "モデル検証", score: validationScore, detail: `${tournament[0]?.metrics.trades || 0}回の過去検証を反映` },
+    { name: "利益残り", score: profitScore, detail: signal.profitDiscipline?.summary || "利益が残るかを確認します。" },
     { name: "モデル一致", score: agreementScore, detail: `一致度${signal.modelAgreement}%` },
     { name: "流れ", score: trendScore, detail: `相場環境は${regime.name}` },
     { name: "勢い", score: momentumScore, detail: `RSI ${round(features.rsi14, 1)}` },
@@ -63,6 +65,7 @@ function weightedEdgeScore(factors) {
     "市場連動": 1,
     "重要予定": 1.15,
     "モデル検証": 1.25,
+    "利益残り": 1.3,
     "モデル一致": 1.05,
     "流れ": 0.9,
     "勢い": 0.75,
@@ -168,12 +171,16 @@ function safetyGate({ edgeScore, dataQuality, signal }) {
   ];
   if (dataQuality.source === "demo") blockers.unshift("デモデータのため自動売買禁止");
   if (signal.confidence < 75 || edgeScore < 75) blockers.unshift("信頼度または勝ち筋スコアが75未満");
+  if ((signal.profitDiscipline?.score ?? 50) < 60) blockers.unshift("利益が残る検証点数が60未満");
 
   return {
     status: "自動売買禁止",
     analysisOnly: true,
     canAutoTrade: false,
-    paperTradeReady: dataQuality.source !== "demo" && edgeScore >= 70 && signal.confidence >= 70,
+    paperTradeReady: dataQuality.source !== "demo"
+      && edgeScore >= 70
+      && signal.confidence >= 70
+      && (signal.profitDiscipline?.score ?? 0) >= 60,
     blockers: [...new Set(blockers)].slice(0, 6),
     requiredBeforeAutoTrading: [
       "読み取り専用のデータ連携を先に作る",

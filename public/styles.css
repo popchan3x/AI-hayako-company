@@ -257,6 +257,41 @@ dl {
   grid-template-columns: repeat(4, minmax(0, 1fr));
 }
 
+.learning-health {
+  background: #f7faf6;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  margin-top: 14px;
+  padding: 14px;
+}
+
+.learning-health-head {
+  align-items: center;
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 8px;
+}
+
+.learning-health-head span {
+  background: #dff3e8;
+  border-radius: 999px;
+  color: var(--accent);
+  font-size: 12px;
+  padding: 4px 9px;
+}
+
+.learning-health-head span.is-alert {
+  background: #fff2ef;
+  color: #9b2c1f;
+}
+
+.learning-health p {
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.6;
+  margin: 0 0 10px;
+}
+
 .scheduler-grid {
   border-top: 1px solid var(--line);
   grid-template-columns: repeat(4, minmax(0, 1fr));

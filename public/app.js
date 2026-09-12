@@ -69,6 +69,9 @@ const elements = {
   learningOutcomes: document.querySelector("#learningOutcomes"),
   learningPending: document.querySelector("#learningPending"),
   learningNewSignals: document.querySelector("#learningNewSignals"),
+  confidenceHealthStatus: document.querySelector("#confidenceHealthStatus"),
+  confidenceHealthSummary: document.querySelector("#confidenceHealthSummary"),
+  learningCalibration: document.querySelector("#learningCalibration"),
   schedulerStatus: document.querySelector("#schedulerStatus"),
   schedulerTime: document.querySelector("#schedulerTime"),
   schedulerIntervals: document.querySelector("#schedulerIntervals"),
@@ -281,6 +284,19 @@ function renderLearning(summary) {
   elements.learningOutcomes.textContent = summary.totals.outcomes;
   elements.learningPending.textContent = summary.totals.pendingOutcomes;
   elements.learningNewSignals.textContent = summary.totals.newSignals;
+  const health = summary.confidenceHealth || {};
+  elements.confidenceHealthStatus.textContent = health.status || "-";
+  elements.confidenceHealthStatus.classList.toggle("is-alert", health.status === "要修正");
+  elements.confidenceHealthSummary.textContent = health.summary || "信頼度の点検データはまだありません。";
+  elements.learningCalibration.innerHTML = (summary.calibration || []).map((bucket) => `
+    <tr>
+      <td>${escapeHtml(bucket.name)}</td>
+      <td>${escapeHtml(bucket.count || 0)}</td>
+      <td>${escapeHtml(bucket.winRate || 0)}%</td>
+      <td>${escapeHtml(bucket.averageNetReturn || 0)}%</td>
+      <td>${escapeHtml(bucket.status || "-")}</td>
+    </tr>
+  `).join("");
   listItems(elements.learningActions, summary.nextActions || []);
 }
 

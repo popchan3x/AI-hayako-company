@@ -1,7 +1,7 @@
 import { appendFile, mkdir, readFile, writeFile } from "node:fs/promises";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
-import { runDailyLearning } from "./learning.js";
+import { rebuildLearningSummary, runDailyLearning } from "./learning.js";
 
 const rootDir = fileURLToPath(new URL("..", import.meta.url));
 const logPath = join(rootDir, "logs", "auto-learning.jsonl");
@@ -48,7 +48,7 @@ function buildReport({ date, provider, intervals, trigger, status, summary, runT
     "",
     "## 結論",
     status === "success"
-      ? `日次学習は成功しました。${intervals.length}時間足をサイト内で実行しました。`
+      ? `日次学習は成功しました。${intervals.length}種類の時間足をサイト内で実行しました。`
       : `日次学習は失敗しました。${error}`,
     "",
     "## 実行情報",
@@ -61,10 +61,13 @@ function buildReport({ date, provider, intervals, trigger, status, summary, runT
     "",
     "## 結果",
     `- 累計シグナル: ${summary?.totals?.signals ?? 0}件`,
+    `- 一意のシグナル: ${summary?.totals?.uniqueSignals ?? summary?.totals?.signals ?? 0}件`,
     `- 今回の新規シグナル: ${runTotals?.newSignals ?? 0}件`,
     `- 累計答え合わせ: ${summary?.totals?.outcomes ?? 0}件`,
+    `- 一意の答え合わせ: ${summary?.totals?.uniqueOutcomes ?? summary?.totals?.outcomes ?? 0}件`,
     `- 今回の新規答え合わせ: ${runTotals?.newOutcomes ?? 0}件`,
     `- 未評価: ${summary?.totals?.pendingOutcomes ?? 0}件`,
+    `- 信頼度点検: ${summary?.confidenceHealth?.summary ?? "未集計"}`,
     "",
     "## 次のアクション",
     ...(summary?.nextActions?.length ? summary.nextActions.map((item, index) => `${index + 1}. ${item}`) : ["1. 次回の日次学習を待ちます。"]),
@@ -147,6 +150,13 @@ export function startAutoLearningScheduler(options = {}) {
         runTotals.newSignals += latestSummary.totals.newSignals || 0;
         runTotals.newOutcomes += latestSummary.totals.newOutcomes || 0;
       }
+
+      latestSummary = await rebuildLearningSummary({
+        provider,
+        intervals,
+        runTotals,
+        runScope: `${date} ${trigger === "scheduled" ? "サイト自動実行" : "サイト手動実行"}の全時間足合算`
+      });
 
       const finishedAt = new Date().toISOString();
       const reportName = `site-market-ai-daily-learning-${date}.md`;

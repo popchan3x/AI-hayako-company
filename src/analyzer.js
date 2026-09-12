@@ -111,12 +111,54 @@ function directionAgreement(tournament, direction) {
   return Math.round((same / tournament.length) * 100);
 }
 
+function buildProfitDiscipline(metrics = {}) {
+  const trades = metrics.trades || 0;
+  const profitFactor = metrics.profitFactor || 0;
+  const payoffRatio = metrics.payoffRatio || 0;
+  const averageReturn = metrics.averageReturn ?? metrics.expectancy ?? 0;
+  const netReturn = metrics.netReturn || 0;
+  const drawdown = metrics.maxDrawdown || 0;
+  let score = 50;
+
+  score += trades >= 12 ? 8 : trades >= 6 ? 2 : -12;
+  score += profitFactor >= 1.3 ? 22 : profitFactor >= 1 ? 10 : -Math.min(32, 12 + (1 - profitFactor) * 28);
+  score += averageReturn > 0 ? 22 : -18;
+  score += netReturn > 0 ? 14 : -12;
+  score += payoffRatio >= 1.2 ? 10 : payoffRatio >= 1 ? 3 : -8;
+  if (netReturn <= 0 && drawdown > Math.abs(netReturn)) score -= 8;
+
+  const boundedScore = clamp(Math.round(score), 0, 100);
+  const status = boundedScore >= 75 ? "利益優先"
+    : boundedScore >= 60 ? "条件付き"
+      : boundedScore >= 45 ? "弱い"
+        : "見送り優先";
+  const confidenceAdjustment = boundedScore >= 75 ? 6
+    : boundedScore >= 60 ? 0
+      : boundedScore >= 45 ? -12
+        : -24;
+  const confidenceCap = boundedScore >= 75 ? 90
+    : boundedScore >= 60 ? 82
+      : boundedScore >= 45 ? 72
+        : 62;
+
+  return {
+    score: boundedScore,
+    status,
+    confidenceAdjustment,
+    confidenceCap,
+    shouldStandAside: boundedScore < 45 || (profitFactor < 1 && averageReturn <= 0 && netReturn <= 0),
+    summary: `利益点検は${status}です。過去検証${trades}回、平均損益${round(averageReturn * 100, 3)}%、累計損益${round(netReturn * 100, 2)}%、利益倍率${round(profitFactor, 2)}です。`
+  };
+}
+
 function modelWeight(entry) {
   const scoreWeight = Math.max(0.3, 1 + entry.adjustedScore / 25);
   const confidenceWeight = entry.currentSignal.confidence / 100;
   const sampleWeight = Math.max(0.45, Math.min(1, entry.metrics.trades / 8));
   const profitWeight = Math.max(0.4, Math.min(1.4, entry.metrics.profitFactor / 1.2));
-  return scoreWeight * confidenceWeight * sampleWeight * profitWeight;
+  const profitDiscipline = buildProfitDiscipline(entry.metrics);
+  const disciplineWeight = Math.max(0.25, profitDiscipline.score / 70);
+  return scoreWeight * confidenceWeight * sampleWeight * profitWeight * disciplineWeight;
 }
 
 function weightedDirection(tournament) {
@@ -164,11 +206,12 @@ function buildScenarios(direction, features) {
   ];
 }
 
-function buildRiskSummary(regime, dataQuality, costs, modelAgreement, marketLinkage, eventFilter) {
+function buildRiskSummary(regime, dataQuality, costs, modelAgreement, marketLinkage, eventFilter, profitDiscipline) {
   const items = [
     `相場環境: ${regime.name}、危険度${regime.riskLevel}`,
     marketLinkage ? `市場連動: ${marketLinkage.status}、スコア${marketLinkage.score}/100` : null,
     eventFilter ? `重要予定: ${eventFilter.status}、スコア${eventFilter.score}/100` : null,
+    profitDiscipline ? `利益点検: ${profitDiscipline.status}、スコア${profitDiscipline.score}/100` : null,
     `データ品質: ${dataQuality.grade}、スコア${dataQuality.score}/100`,
     `売買コスト概算: ${costs.totalBps}bp`,
     `モデル一致度: ${modelAgreement}%`
@@ -186,6 +229,7 @@ function scoreFromDistance(value, center, width) {
 
 function buildAnalysisMaterials(features, tournament, regime, dataQuality, costs, timeframe, marketLinkage, eventFilter, legendPlaybooks) {
   const leader = tournament[0];
+  const profitDiscipline = leader ? buildProfitDiscipline(leader.metrics) : null;
   const trendScore = features.sma20 > features.sma50 ? 72 : 48;
   const momentumScore = scoreFromDistance(features.rsi14 || 50, 58, 2.2);
   const volatilityScore = features.atr14 && features.close
@@ -214,6 +258,7 @@ function buildAnalysisMaterials(features, tournament, regime, dataQuality, costs
       { name: "出来高", score: volumeScore, detail: `直近出来高は平均比${round(features.volumeRatio, 2)}倍です。動きの本気度を見ます。` },
       { name: "節目", score: levelScore, detail: `支持線${round(features.support, 4)}、抵抗線${round(features.resistance, 4)}を入口と撤退の目安にします。` },
       { name: "モデル大会", score: clamp(Math.round((leader?.adjustedScore || 0) + 55), 0, 100), detail: `${leader?.name || "未計算"}が現在の首位です。複数モデルの勝ち筋を比較します。` },
+      profitDiscipline ? { name: "利益残り", score: profitDiscipline.score, detail: profitDiscipline.summary } : null,
       { name: "コスト", score: clamp(100 - costs.totalBps * 8, 0, 100), detail: `想定コストは${costs.totalBps}bpです。短期足ほど重く見ます。` },
       { name: "市場連動", score: marketLinkage?.score ?? 50, detail: marketLinkage?.summary || "周辺市場の確認は個別分析で行います。" },
       { name: "重要予定", score: eventFilter?.score ?? 100, detail: eventFilter?.warnings?.[0] || "直近の警戒時間はありません。" },
@@ -234,12 +279,14 @@ function buildAnalysisMaterials(features, tournament, regime, dataQuality, costs
 function selectMetaSignal(tournament, features, regime, dataQuality, costs) {
   const winner = tournament[0];
   const base = winner.currentSignal;
+  const profitDiscipline = buildProfitDiscipline(winner.metrics);
   const ensemble = weightedDirection(tournament);
   const countAgreement = directionAgreement(tournament, ensemble.direction);
   const agreement = Math.max(ensemble.agreement, countAgreement);
   const reasons = unique([
     `モデル大会では${base.name}が1位です。`,
     `重み付き判断では${ensemble.direction}が${ensemble.agreement}%です。`,
+    profitDiscipline.summary,
     `相場環境は${regime.name}で、危険度は${regime.riskLevel}です。`,
     ...base.rationale,
     ...regime.reasons
@@ -252,6 +299,7 @@ function selectMetaSignal(tournament, features, regime, dataQuality, costs) {
   confidence += winner.metrics.trades >= 4 ? 3 : -6;
   confidence += winner.regimeFit;
   confidence += dataQuality.score >= 90 ? 4 : dataQuality.score >= 70 ? 0 : -12;
+  confidence += profitDiscipline.confidenceAdjustment;
   confidence -= Math.max(0, costs.totalBps - 4) * 1.2;
 
   if (agreement < 50) confidence = Math.min(confidence, 74);
@@ -263,7 +311,14 @@ function selectMetaSignal(tournament, features, regime, dataQuality, costs) {
   if (winner.metrics.trades < 6) confidenceCap = Math.min(confidenceCap, 78);
   if (agreement < 70) confidenceCap = Math.min(confidenceCap, 82);
   if (costs.totalBps >= 5) confidenceCap = Math.min(confidenceCap, 84);
+  confidenceCap = Math.min(confidenceCap, profitDiscipline.confidenceCap);
   confidence = Math.min(confidence, confidenceCap);
+
+  if (profitDiscipline.shouldStandAside && direction !== "見送り") {
+    direction = "見送り";
+    confidence = Math.min(confidence, 62);
+    reasons.unshift("過去検証で利益が残りにくいため、見送りを優先します。");
+  }
 
   if (regime.riskLevel === "高い" && agreement < 50) {
     direction = "見送り";
@@ -280,13 +335,14 @@ function selectMetaSignal(tournament, features, regime, dataQuality, costs) {
     confidence: clamp(Math.round(confidence), 0, 100),
     selectedModel: "Meta Ensemble",
     leadModel: base.name,
+    profitDiscipline,
     modelAgreement: agreement,
     voteWeights: ensemble.weights,
     marketRegime: regime,
     dataQuality,
     costs,
     scenarios: buildScenarios(direction, features),
-    riskSummary: buildRiskSummary(regime, dataQuality, costs, agreement),
+    riskSummary: buildRiskSummary(regime, dataQuality, costs, agreement, null, null, profitDiscipline),
     reasons: reasons.slice(0, 5),
     qualityChecks: {
       usesFutureData: false,
@@ -336,7 +392,7 @@ function applyDecisionGuards(signal, features, marketLinkage, eventFilter) {
     marketLinkage,
     eventFilter,
     scenarios: buildScenarios(direction, features),
-    riskSummary: buildRiskSummary(signal.marketRegime, signal.dataQuality, signal.costs, signal.modelAgreement, marketLinkage, eventFilter),
+    riskSummary: buildRiskSummary(signal.marketRegime, signal.dataQuality, signal.costs, signal.modelAgreement, marketLinkage, eventFilter, signal.profitDiscipline),
     reasons: unique(reasons).slice(0, 5),
     qualityChecks: {
       ...signal.qualityChecks,

@@ -92,6 +92,9 @@ export function backtestCandidate(candles, candidate, options = {}) {
   const sampleScore = Math.min(1, returns.length / 10);
   const stabilityPenalty = drawdown * 100 + Math.max(0, lossStreak - 2) * 1.5;
   const expectancyScore = averageReturn * 10000;
+  const negativeReturnPenalty = averageReturn <= 0 ? 16 : 0;
+  const profitFactorPenalty = profitFactor < 1 ? 8 + (1 - profitFactor) * 18 : 0;
+  const payoffPenalty = payoffRatio < 1 ? (1 - payoffRatio) * 5 : 0;
 
   return {
     trades: returns.length,
@@ -104,7 +107,16 @@ export function backtestCandidate(candles, candidate, options = {}) {
     maxDrawdown: drawdown,
     maxLossStreak: lossStreak,
     sampleScore,
-    score: expectancyScore * 0.45 + netReturn * 80 + winRate * 24 + profitFactor * 3 + payoffRatio * 2 + sampleScore * 8 - stabilityPenalty
+    score: expectancyScore * 0.7
+      + netReturn * 140
+      + winRate * 12
+      + profitFactor * 5
+      + payoffRatio * 3
+      + sampleScore * 8
+      - stabilityPenalty
+      - negativeReturnPenalty
+      - profitFactorPenalty
+      - payoffPenalty
   };
 }
 

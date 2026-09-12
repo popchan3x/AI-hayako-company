@@ -52,6 +52,8 @@ test("analyzer returns priced validation signal with regime and meta model", asy
   assert.equal(typeof result.signal.dataQuality.score, "number");
   assert.equal(typeof result.signal.costs.totalBps, "number");
   assert.equal(typeof result.signal.voteWeights.buy, "number");
+  assert.equal(typeof result.signal.profitDiscipline.score, "number");
+  assert.equal(typeof result.signal.profitDiscipline.summary, "string");
   assert.equal(typeof result.signal.marketLinkage.score, "number");
   assert.equal(typeof result.signal.marketLinkage.status, "string");
   assert.ok(result.signal.marketLinkage.drivers.some((driver) => typeof driver.impact === "string" && driver.impact.length > 0));
@@ -67,6 +69,7 @@ test("analyzer returns priced validation signal with regime and meta model", asy
   assert.equal(result.signal.legendPlaybooks.cards.length, 6);
   assert.ok(result.signal.legendPlaybooks.cards.some((card) => card.trader.includes("Turtle")));
   assert.ok(result.signal.intelligence.factors.some((factor) => factor.name === "巨匠手法"));
+  assert.ok(result.signal.intelligence.factors.some((factor) => factor.name === "利益残り"));
   assert.ok(result.signal.intelligence.externalSignals.length >= 5);
   assert.ok(result.signal.scenarios.length >= 3);
   assert.ok(result.signal.riskSummary.length >= 4);
@@ -338,8 +341,11 @@ test("daily learning stores one signal per asset without duplicate same-day reco
   const second = await runDailyLearning({ provider: "demo", learningDir, date: "2026-06-28" });
   assert.equal(first.totals.newSignals, expected);
   assert.equal(first.totals.signals, expected);
+  assert.equal(first.totals.uniqueSignals, expected);
   assert.equal(second.totals.newSignals, 0);
   assert.equal(second.totals.signals, expected);
+  assert.equal(second.totals.uniqueSignals, expected);
+  assert.equal(typeof second.confidenceHealth.status, "string");
   assert.ok(second.totals.pendingOutcomes >= 0);
 });
 
@@ -358,6 +364,9 @@ test("daily learning can save signals and summary before outcome evaluation", as
   assert.equal(signalsOnly.totals.newOutcomes, 0);
   assert.equal(savedSummary.totals.newSignals, expected);
   assert.equal(savedSummary.totals.newOutcomes, 0);
+  assert.equal(savedSummary.totals.uniqueSignals, expected);
+  assert.equal(savedSummary.confidenceHealth.status, "通常");
+  assert.ok(Array.isArray(savedSummary.calibration));
 
   const outcomesOnly = await runDailyLearning({
     provider: "demo",
