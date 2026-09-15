@@ -54,6 +54,8 @@ test("analyzer returns priced validation signal with regime and meta model", asy
   assert.equal(typeof result.signal.voteWeights.buy, "number");
   assert.equal(typeof result.signal.profitDiscipline.score, "number");
   assert.equal(typeof result.signal.profitDiscipline.summary, "string");
+  assert.equal(typeof result.signal.performanceGuard.score, "number");
+  assert.equal(typeof result.signal.performanceGuard.summary, "string");
   assert.equal(typeof result.signal.marketLinkage.score, "number");
   assert.equal(typeof result.signal.marketLinkage.status, "string");
   assert.ok(result.signal.marketLinkage.drivers.some((driver) => typeof driver.impact === "string" && driver.impact.length > 0));
@@ -70,6 +72,7 @@ test("analyzer returns priced validation signal with regime and meta model", asy
   assert.ok(result.signal.legendPlaybooks.cards.some((card) => card.trader.includes("Turtle")));
   assert.ok(result.signal.intelligence.factors.some((factor) => factor.name === "巨匠手法"));
   assert.ok(result.signal.intelligence.factors.some((factor) => factor.name === "利益残り"));
+  assert.ok(result.signal.intelligence.factors.some((factor) => factor.name === "過去成績"));
   assert.ok(result.signal.intelligence.externalSignals.length >= 5);
   assert.ok(result.signal.scenarios.length >= 3);
   assert.ok(result.signal.riskSummary.length >= 4);
@@ -346,6 +349,7 @@ test("daily learning stores one signal per asset without duplicate same-day reco
   assert.equal(second.totals.signals, expected);
   assert.equal(second.totals.uniqueSignals, expected);
   assert.equal(typeof second.confidenceHealth.status, "string");
+  assert.ok(Array.isArray(second.profitLeaders.symbols));
   assert.ok(second.totals.pendingOutcomes >= 0);
 });
 
@@ -367,6 +371,7 @@ test("daily learning can save signals and summary before outcome evaluation", as
   assert.equal(savedSummary.totals.uniqueSignals, expected);
   assert.equal(savedSummary.confidenceHealth.status, "通常");
   assert.ok(Array.isArray(savedSummary.calibration));
+  assert.ok(Array.isArray(savedSummary.profitLeaders.symbols));
 
   const outcomesOnly = await runDailyLearning({
     provider: "demo",

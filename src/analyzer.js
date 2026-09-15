@@ -9,6 +9,7 @@ import { estimateTradingCosts } from "./costs.js";
 import { buildWorldClassIntelligence } from "./worldClassIntelligence.js";
 import { buildCurrencyStrengthMap, buildImportantEventFilter, buildMarketLinkageMap } from "./marketGuards.js";
 import { buildLegendTraderPlaybooks } from "./traderPlaybooks.js";
+import { buildPerformanceGuard } from "./performanceMemory.js";
 
 const MIN_CANDLES = 90;
 const DIRECTIONS = ["買い", "売り", "見送り"];
@@ -206,12 +207,13 @@ function buildScenarios(direction, features) {
   ];
 }
 
-function buildRiskSummary(regime, dataQuality, costs, modelAgreement, marketLinkage, eventFilter, profitDiscipline) {
+function buildRiskSummary(regime, dataQuality, costs, modelAgreement, marketLinkage, eventFilter, profitDiscipline, performanceGuard) {
   const items = [
     `相場環境: ${regime.name}、危険度${regime.riskLevel}`,
     marketLinkage ? `市場連動: ${marketLinkage.status}、スコア${marketLinkage.score}/100` : null,
     eventFilter ? `重要予定: ${eventFilter.status}、スコア${eventFilter.score}/100` : null,
     profitDiscipline ? `利益点検: ${profitDiscipline.status}、スコア${profitDiscipline.score}/100` : null,
+    performanceGuard ? `過去成績: ${performanceGuard.status}、スコア${performanceGuard.score}/100` : null,
     `データ品質: ${dataQuality.grade}、スコア${dataQuality.score}/100`,
     `売買コスト概算: ${costs.totalBps}bp`,
     `モデル一致度: ${modelAgreement}%`
@@ -220,6 +222,7 @@ function buildRiskSummary(regime, dataQuality, costs, modelAgreement, marketLink
   if (dataQuality.score < 70) items.push("データ品質が十分ではないため、分析不可または見送りを優先します。");
   if (marketLinkage?.status === "逆風") items.push("周辺市場の逆風があるため、入口を急がない判断を強めます。");
   if (eventFilter?.status === "見送り優先") items.push("重要予定の警戒時間内のため、見送りを優先します。");
+  if (performanceGuard?.status === "見送り優先") items.push("過去成績が弱いため、見送りを優先します。");
   return items.slice(0, 6);
 }
 
@@ -342,7 +345,7 @@ function selectMetaSignal(tournament, features, regime, dataQuality, costs) {
     dataQuality,
     costs,
     scenarios: buildScenarios(direction, features),
-    riskSummary: buildRiskSummary(regime, dataQuality, costs, agreement, null, null, profitDiscipline),
+    riskSummary: buildRiskSummary(regime, dataQuality, costs, agreement, null, null, profitDiscipline, null),
     reasons: reasons.slice(0, 5),
     qualityChecks: {
       usesFutureData: false,
@@ -350,6 +353,36 @@ function selectMetaSignal(tournament, features, regime, dataQuality, costs) {
       directPosting: false,
       directTrading: false
     }
+  };
+}
+
+function applyPerformanceGuard(signal, features, performanceGuard) {
+  let direction = signal.direction;
+  let confidence = signal.confidence + (performanceGuard?.confidenceAdjustment || 0);
+  const reasons = [...signal.reasons];
+
+  if (performanceGuard) {
+    reasons.unshift(performanceGuard.summary);
+    if (performanceGuard.weakest?.detail) reasons.unshift(`弱い過去成績: ${performanceGuard.weakest.detail}`);
+    confidence = Math.min(confidence, performanceGuard.confidenceCap);
+    if (performanceGuard.shouldStandAside && direction !== "見送り") {
+      direction = "見送り";
+      confidence = Math.min(confidence, 62);
+      reasons.unshift("過去成績が弱いため、強い候補にせず見送りを優先します。");
+    }
+  }
+
+  confidence = clamp(Math.round(confidence), 0, 100);
+
+  return {
+    ...signal,
+    ...buildPricePlan(direction, features),
+    direction,
+    confidence,
+    performanceGuard,
+    scenarios: buildScenarios(direction, features),
+    riskSummary: buildRiskSummary(signal.marketRegime, signal.dataQuality, signal.costs, signal.modelAgreement, null, null, signal.profitDiscipline, performanceGuard),
+    reasons: unique(reasons).slice(0, 5)
   };
 }
 
@@ -392,7 +425,7 @@ function applyDecisionGuards(signal, features, marketLinkage, eventFilter) {
     marketLinkage,
     eventFilter,
     scenarios: buildScenarios(direction, features),
-    riskSummary: buildRiskSummary(signal.marketRegime, signal.dataQuality, signal.costs, signal.modelAgreement, marketLinkage, eventFilter, signal.profitDiscipline),
+    riskSummary: buildRiskSummary(signal.marketRegime, signal.dataQuality, signal.costs, signal.modelAgreement, marketLinkage, eventFilter, signal.profitDiscipline, signal.performanceGuard),
     reasons: unique(reasons).slice(0, 5),
     qualityChecks: {
       ...signal.qualityChecks,
@@ -427,10 +460,17 @@ export async function analyzeSymbol(symbol, options = {}) {
   const tournament = runModelTournament(candles, { costRate: costs.costRate });
   const regime = classifyMarketRegime(candles);
   const metaSignal = selectMetaSignal(tournament, features, regime, dataQuality, costs);
+  const performanceGuard = await buildPerformanceGuard({
+    symbol: asset.symbol,
+    interval,
+    leadModel: metaSignal.leadModel,
+    confidence: metaSignal.confidence
+  });
+  const performanceAdjustedSignal = applyPerformanceGuard(metaSignal, features, performanceGuard);
   const eventFilter = buildImportantEventFilter(asset);
   const marketLinkage = await buildMarketLinkageMap({
     asset,
-    targetDirection: metaSignal.direction,
+    targetDirection: performanceAdjustedSignal.direction,
     provider: options.provider || "demo",
     interval,
     includeContext: options.includeContext !== false
@@ -442,7 +482,7 @@ export async function analyzeSymbol(symbol, options = {}) {
       includeContext: options.includeContext !== false
     })
     : null;
-  const guardedSignal = applyDecisionGuards(metaSignal, features, marketLinkage, eventFilter);
+  const guardedSignal = applyDecisionGuards(performanceAdjustedSignal, features, marketLinkage, eventFilter);
   const signal = {
     ...guardedSignal,
     currencyStrength,

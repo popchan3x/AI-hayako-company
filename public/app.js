@@ -72,6 +72,7 @@ const elements = {
   confidenceHealthStatus: document.querySelector("#confidenceHealthStatus"),
   confidenceHealthSummary: document.querySelector("#confidenceHealthSummary"),
   learningCalibration: document.querySelector("#learningCalibration"),
+  learningProfitLeaders: document.querySelector("#learningProfitLeaders"),
   schedulerStatus: document.querySelector("#schedulerStatus"),
   schedulerTime: document.querySelector("#schedulerTime"),
   schedulerIntervals: document.querySelector("#schedulerIntervals"),
@@ -297,6 +298,11 @@ function renderLearning(summary) {
       <td>${escapeHtml(bucket.status || "-")}</td>
     </tr>
   `).join("");
+  const leaders = [
+    ...(summary.profitLeaders?.symbols || []).slice(0, 3).map((row) => `銘柄 ${row.name}: ${row.count}件、平均損益${row.averageNetReturn}%`),
+    ...(summary.profitLeaders?.timeframes || []).slice(0, 3).map((row) => `時間足 ${TIMEFRAME_LABELS[row.name] || row.name}: ${row.count}件、平均損益${row.averageNetReturn}%`)
+  ];
+  listItems(elements.learningProfitLeaders, leaders.length ? leaders : ["平均損益がプラスの候補はまだありません。"]);
   listItems(elements.learningActions, summary.nextActions || []);
 }
 

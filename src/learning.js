@@ -5,6 +5,7 @@ import { analyzeSymbol, listAssets } from "./analyzer.js";
 import { getCandles } from "./dataProvider.js";
 import { normalizeTimeframe } from "./dataProvider.js";
 import { round } from "./indicators.js";
+import { profitLeaders } from "./performanceMemory.js";
 
 const rootDir = fileURLToPath(new URL("..", import.meta.url));
 const defaultLearningDir = join(rootDir, "data", "learning");
@@ -94,6 +95,8 @@ function buildSignalRecord(result, provider, date, interval) {
     takeProfit: signal.takeProfit,
     selectedModel: signal.selectedModel,
     leadModel: signal.leadModel,
+    performanceGuardScore: signal.performanceGuard?.score,
+    performanceGuardStatus: signal.performanceGuard?.status,
     regime: signal.marketRegime.name,
     riskLevel: signal.marketRegime.riskLevel,
     modelAgreement: signal.modelAgreement,
@@ -259,6 +262,11 @@ function buildSummary(signals, outcomes, created, evaluated, provider, intervals
   const calibration = calibrationBuckets(uniqueOutcomes, uniqueSignals);
   const health = confidenceHealth(calibration);
   const runTotals = options.runTotals || {};
+  const byModel = summarizeGroup(uniqueOutcomes, "leadModel");
+  const byRegime = summarizeGroup(uniqueOutcomes, "regime");
+  const byTimeframe = summarizeGroup(uniqueOutcomes, "interval");
+  const bySymbol = summarizeGroup(uniqueOutcomes, "symbol");
+  const profitLeaderRows = profitLeaders({ bySymbol, byTimeframe, byModel });
   return {
     generatedAt: new Date().toISOString(),
     provider,
@@ -276,17 +284,20 @@ function buildSummary(signals, outcomes, created, evaluated, provider, intervals
       expectedOutcomes: uniqueSignals.length * horizons.length,
       pendingOutcomes: Math.max(0, pending)
     },
-    byModel: summarizeGroup(uniqueOutcomes, "leadModel"),
-    byRegime: summarizeGroup(uniqueOutcomes, "regime"),
-    byTimeframe: summarizeGroup(uniqueOutcomes, "interval"),
-    bySymbol: summarizeGroup(uniqueOutcomes, "symbol"),
+    byModel,
+    byRegime,
+    byTimeframe,
+    bySymbol,
+    profitLeaders: profitLeaderRows,
     calibration,
     confidenceHealth: health,
     nextActions: [
       health.status === "要修正"
         ? "信頼度90以上でも平均損益が0%以下なら、強い候補として扱わない。"
         : "信頼度90以上の答え合わせを30件以上たまるまで増やす。",
-      "モデル別の平均損益が0%未満の間は、見送り判定を強める。",
+      profitLeaderRows.symbols.length
+        ? `平均損益がプラスの上位銘柄${profitLeaderRows.symbols.length}件を、強い候補の候補として毎日確認する。`
+        : "平均損益がプラスの銘柄が出るまで、見送り判定を強める。",
       "明日も9:00以降に6種類の時間足で学習し、4本後、8本後、16本後の答え合わせを保存する。"
     ]
   };
@@ -302,6 +313,7 @@ async function writeLearningSummary(paths, signals, outcomes, created, evaluated
 function summaryMarkdown(summary) {
   const topModel = summary.byModel[0];
   const topTimeframe = summary.byTimeframe?.[0];
+  const topProfitSymbol = summary.profitLeaders?.symbols?.[0];
   return [
     "# Market AI Learning Summary",
     "",
@@ -312,6 +324,7 @@ function summaryMarkdown(summary) {
     `集計範囲は${summary.runScope}です。累計シグナルは${summary.totals.signals}件、一意のシグナルは${summary.totals.uniqueSignals}件、累計答え合わせは${summary.totals.outcomes}件、未評価は${summary.totals.pendingOutcomes}件です。`,
     topModel ? `現時点で記録数が最も多いモデルは${topModel.name}で、${topModel.count}件です。` : "まだ答え合わせ済みのモデル成績はありません。",
     topTimeframe ? `現時点で記録数が最も多い時間足は${topTimeframe.name}で、${topTimeframe.count}件です。` : "まだ時間足別の答え合わせはありません。",
+    topProfitSymbol ? `平均損益がプラスの上位候補は${topProfitSymbol.name}で、${topProfitSymbol.count}件、平均損益${topProfitSymbol.averageNetReturn}%です。` : "平均損益がプラスの上位候補はまだありません。",
     summary.confidenceHealth ? `信頼度点検: ${summary.confidenceHealth.summary}` : "信頼度点検はまだありません。",
     "",
     "## 次のアクション",
@@ -413,6 +426,7 @@ export async function readLearningSummary(options = {}) {
         byRegime: [],
         byTimeframe: [],
         bySymbol: [],
+        profitLeaders: { symbols: [], timeframes: [], models: [] },
         calibration: [],
         confidenceHealth: {
           status: "未実行",
