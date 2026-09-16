@@ -64,6 +64,11 @@ test("analyzer returns priced validation signal with regime and meta model", asy
   assert.equal(typeof result.signal.eventFilter.status, "string");
   assert.equal(typeof result.signal.dataQuality.decision, "string");
   assert.equal(typeof result.signal.intelligence.edgeScore, "number");
+  assert.equal(typeof result.signal.intelligence.rawEdgeScore, "number");
+  if (result.signal.performanceGuard.shouldStandAside) {
+    assert.ok(result.signal.intelligence.edgeScore <= 64);
+    assert.equal(result.signal.intelligence.verdict, "見送り優先");
+  }
   assert.equal(result.signal.intelligence.autoTradeGate.canAutoTrade, false);
   assert.equal(result.signal.intelligence.sourceSafety.noExternalCodeExecuted, true);
   assert.ok(result.signal.intelligence.factors.length >= 11);

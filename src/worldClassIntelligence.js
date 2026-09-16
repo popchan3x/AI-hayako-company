@@ -199,12 +199,17 @@ function safetyGate({ edgeScore, dataQuality, signal }) {
 
 export function buildWorldClassIntelligence(context) {
   const factors = factorScores(context);
-  const edgeScore = weightedEdgeScore(factors);
+  const rawEdgeScore = weightedEdgeScore(factors);
+  const scoreCaps = [];
+  if (context.signal.performanceGuard?.shouldStandAside) scoreCaps.push(64);
+  if (context.signal.profitDiscipline?.shouldStandAside) scoreCaps.push(66);
+  const edgeScore = scoreCaps.length ? Math.min(rawEdgeScore, ...scoreCaps) : rawEdgeScore;
   const readinessScore = Math.round((edgeScore * 0.55) + (context.signal.confidence * 0.25) + (context.dataQuality.score * 0.2));
   const gate = safetyGate({ edgeScore, dataQuality: context.dataQuality, signal: context.signal });
 
   return {
     edgeScore,
+    rawEdgeScore,
     readinessScore,
     verdict: edgeScore >= 78 ? "強い候補" : edgeScore >= 65 ? "条件付き候補" : "見送り優先",
     factors,
