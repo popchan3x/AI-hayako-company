@@ -5,3 +5,4 @@ coverage/
 dist/
 .cache/
 *.log
+logs/site-startup.jsonl
