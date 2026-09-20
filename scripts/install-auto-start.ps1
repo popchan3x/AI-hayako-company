@@ -20,6 +20,9 @@ $principal = New-ScheduledTaskPrincipal `
   -RunLevel Limited
 $settings = New-ScheduledTaskSettingsSet `
   -StartWhenAvailable `
+  -WakeToRun `
+  -AllowStartIfOnBatteries `
+  -DontStopIfGoingOnBatteries `
   -MultipleInstances IgnoreNew `
   -RestartCount 3 `
   -RestartInterval (New-TimeSpan -Minutes 1) `
@@ -42,6 +45,8 @@ $info = Get-ScheduledTaskInfo -TaskName $TaskName
   LastRunTime = $info.LastRunTime
   LastTaskResult = $info.LastTaskResult
   NextRunTime = $info.NextRunTime
+  MissedRuns = $info.NumberOfMissedRuns
   TriggerCount = @($task.Triggers).Count
+  WakeToRun = $task.Settings.WakeToRun
   User = $currentUser
 }

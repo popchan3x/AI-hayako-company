@@ -107,7 +107,7 @@ export async function buildPerformanceGuard({ symbol, interval, leadModel, confi
     rowScore(findRow(learningSummary.byModel, leadModel), "モデル")
   ];
   const score = combinedScore(checks, learningSummary);
-  const status = statusFromScore(score);
+  const scoreStatus = statusFromScore(score);
   const positiveChecks = checks.filter((check) => check.averageNetReturn > 0 && (check.count || 0) >= 30).length;
   const negativeCore = checks.filter((check) => check.averageNetReturn <= 0 && (check.count || 0) >= 30).length;
   const highConfidenceBroken = learningSummary.confidenceHealth?.status === "要修正";
@@ -120,7 +120,10 @@ export async function buildPerformanceGuard({ symbol, interval, leadModel, confi
       : score >= 45 ? 70
         : 62;
   const finalCap = highConfidenceBroken ? Math.min(confidenceCap, 74) : confidenceCap;
-  const shouldStandAside = score < 45 || (highConfidenceBroken && confidence >= 75 && positiveChecks === 0 && negativeCore >= 2);
+  const weakAcrossCoreChecks = negativeCore >= 2 && positiveChecks < 2;
+  const brokenHighConfidence = highConfidenceBroken && confidence >= 75 && positiveChecks < 2;
+  const shouldStandAside = score < 45 || weakAcrossCoreChecks || brokenHighConfidence;
+  const status = shouldStandAside ? "見送り優先" : scoreStatus;
   const strongest = [...checks].sort((a, b) => b.score - a.score)[0];
   const weakest = [...checks].sort((a, b) => a.score - b.score)[0];
 
@@ -132,6 +135,8 @@ export async function buildPerformanceGuard({ symbol, interval, leadModel, confi
     shouldStandAside,
     positiveChecks,
     negativeCore,
+    weakAcrossCoreChecks,
+    brokenHighConfidence,
     strongest,
     weakest,
     checks,
