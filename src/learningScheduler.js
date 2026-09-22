@@ -1,4 +1,4 @@
-import { appendFile, mkdir, readFile, writeFile } from "node:fs/promises";
+import { appendFile, mkdir, readFile, rm, stat, writeFile } from "node:fs/promises";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { rebuildLearningSummary, runDailyLearning } from "./learning.js";
@@ -6,6 +6,7 @@ import { rebuildLearningSummary, runDailyLearning } from "./learning.js";
 const rootDir = fileURLToPath(new URL("..", import.meta.url));
 const logPath = join(rootDir, "logs", "auto-learning.jsonl");
 const reportsDir = join(rootDir, "reports");
+const lockPath = join(rootDir, "logs", "daily-learning.lock");
 const defaultIntervals = ["1m", "5m", "15m", "1h", "4h", "1d"];
 
 function jstParts(date = new Date()) {
@@ -39,6 +40,34 @@ async function readLogs() {
 async function appendLog(row) {
   await mkdir(dirname(logPath), { recursive: true });
   await appendFile(logPath, `${JSON.stringify(row)}\n`, "utf8");
+}
+
+async function acquireLearningLock() {
+  await mkdir(dirname(lockPath), { recursive: true });
+  try {
+    await mkdir(lockPath);
+    await writeFile(join(lockPath, "owner.json"), JSON.stringify({ pid: process.pid, startedAt: new Date().toISOString() }), "utf8");
+    return true;
+  } catch (error) {
+    if (error.code !== "EEXIST") throw error;
+    try {
+      const lockStat = await stat(lockPath);
+      const stale = Date.now() - lockStat.mtimeMs > 2 * 60 * 60 * 1000;
+      if (stale) {
+        await rm(lockPath, { recursive: true, force: true });
+        await mkdir(lockPath);
+        await writeFile(join(lockPath, "owner.json"), JSON.stringify({ pid: process.pid, startedAt: new Date().toISOString() }), "utf8");
+        return true;
+      }
+    } catch (lockError) {
+      if (lockError.code !== "ENOENT") throw lockError;
+    }
+    return false;
+  }
+}
+
+async function releaseLearningLock() {
+  await rm(lockPath, { recursive: true, force: true });
 }
 
 function buildReport({ date, provider, intervals, trigger, status, summary, runTotals, error, startedAt, finishedAt }) {
@@ -130,6 +159,8 @@ export function startAutoLearningScheduler(options = {}) {
   async function execute(trigger = "manual") {
     await ready;
     if (state.running) throw new Error("日次学習はすでに実行中です。");
+    const lockAcquired = await acquireLearningLock();
+    if (!lockAcquired) throw new Error("別のプロセスが日次学習を実行中です。");
 
     const date = jstParts().date;
     const startedAt = new Date().toISOString();
@@ -222,6 +253,7 @@ export function startAutoLearningScheduler(options = {}) {
     } finally {
       state.running = false;
       state.currentInterval = null;
+      await releaseLearningLock();
     }
   }
 

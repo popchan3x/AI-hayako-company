@@ -8,13 +8,13 @@
   },
   "dataPolicy": "既存のsignals.jsonlとoutcomes.jsonlをサイトの正式な累積学習データとして採用し、重複コピーは作成しない。",
   "signals": {
-    "rows": 4888,
-    "unique": 4888,
+    "rows": 21267,
+    "unique": 21267,
     "duplicates": 0
   },
   "outcomes": {
-    "rows": 14295,
-    "unique": 14295,
+    "rows": 62438,
+    "unique": 62438,
     "duplicates": 0
   },
   "reports": [
@@ -129,18 +129,18 @@
     "content": "# Market AI daily learning memory\n\n- Current run time: 2026-08-01 16:19:10 +09:00\n- Last completed run: 2026-08-01 daily learning.\n- Command executed successfully: `node scripts/daily-learn.js --provider=free-composite --intervals=1m,5m,15m,1h,4h,1d`.\n- Split intervals completed: 1m, 5m, 15m, 1h, 4h, 1d. Failed intervals: 0.\n- Interval durations: 1m 53.2s, 5m 63.1s, 15m 62.4s, 1h 67.9s, 4h 69.7s, 1d 417.4s. Total about 12m14s.\n- Totals after run: 4,433 signals, 13,107 outcomes, 192 pending outcomes.\n- New rows this run: 0 signals, 0 outcomes. Latest JSONL signal/outcome rows remain dated 2026-07-22.\n- Test executed successfully: `npm.cmd test`, 22 passed, 0 failed.\n- Report saved: `C:\\Users\\hyto0\\Documents\\AI hayako-company\\ai-company\\reports\\market-ai-daily-learning-2026-08-01.md`.\n- Slack notifications sent to `#ai-hayako-company`: start https://w1727600632-cmq117268.slack.com/archives/C0BDGAEAY3G/p1785567993728879, final https://w1727600632-cmq117268.slack.com/archives/C0BDGAEAY3G/p1785568822166129.\n- Next run should check why new signals/outcomes remain 0 and whether free data freshness, same-day duplicate detection, or latest candle acquisition is blocking new learning rows.\n"
   },
   "consolidation": {
-    "completedAt": "2026-08-01T08:07:41.707Z",
+    "completedAt": "2026-09-22T10:22:56.332Z",
     "policy": "同じIDは最新のgeneratedAtまたはevaluatedAtを持つ1件に統合する。",
-    "backupDirectory": "data/learning/backups/before-consolidation-2026-08-01T08-07-41-428Z",
+    "backupDirectory": "data/learning/backups/before-consolidation-2026-09-22T10-22-55-171Z",
     "signals": {
-      "before": 4979,
-      "after": 4888,
+      "before": 21358,
+      "after": 21267,
       "removedDuplicates": 91
     },
     "outcomes": {
-      "before": 15204,
-      "after": 14295,
-      "removedDuplicates": 909
+      "before": 62672,
+      "after": 62438,
+      "removedDuplicates": 234
     }
   }
 }

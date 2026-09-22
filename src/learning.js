@@ -1,4 +1,4 @@
-import { appendFile, mkdir, readFile, writeFile } from "node:fs/promises";
+import { appendFile, mkdir, readFile, rename, rm, writeFile } from "node:fs/promises";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { analyzeSymbol, listAssets } from "./analyzer.js";
@@ -36,6 +36,33 @@ async function appendJsonl(path, rows) {
   if (rows.length === 0) return;
   await mkdir(dirname(path), { recursive: true });
   await appendFile(path, `${rows.map((row) => JSON.stringify(row)).join("\n")}\n`, "utf8");
+}
+
+async function writeTextAtomically(path, content, { json = false } = {}) {
+  await mkdir(dirname(path), { recursive: true });
+  if (json) JSON.parse(content);
+  const temporaryPath = `${path}.${process.pid}.${Date.now()}.tmp`;
+  try {
+    await writeFile(temporaryPath, content, "utf8");
+    if (json) JSON.parse(await readFile(temporaryPath, "utf8"));
+    for (let attempt = 0; attempt < 3; attempt += 1) {
+      try {
+        await rename(temporaryPath, path);
+        if (json) JSON.parse(await readFile(path, "utf8"));
+        return;
+      } catch (error) {
+        if (attempt === 2) throw error;
+        await new Promise((resolve) => setTimeout(resolve, 250));
+      }
+    }
+  } finally {
+    await rm(temporaryPath, { force: true }).catch(() => {});
+  }
+}
+
+async function writeJsonlAtomically(path, rows) {
+  const content = rows.length ? `${rows.map((row) => JSON.stringify(row)).join("\n")}\n` : "";
+  await writeTextAtomically(path, content);
 }
 
 function signalKey(record) {
@@ -305,8 +332,8 @@ function buildSummary(signals, outcomes, created, evaluated, provider, intervals
 
 async function writeLearningSummary(paths, signals, outcomes, created, evaluated, provider, intervals, options = {}) {
   const summary = buildSummary(signals, outcomes, created, evaluated, provider, intervals, options);
-  await writeFile(paths.summaryPath, JSON.stringify(summary, null, 2), "utf8");
-  await writeFile(paths.summaryMdPath, summaryMarkdown(summary), "utf8");
+  await writeTextAtomically(paths.summaryPath, JSON.stringify(summary, null, 2), { json: true });
+  await writeTextAtomically(paths.summaryMdPath, summaryMarkdown(summary));
   return summary;
 }
 
@@ -350,7 +377,11 @@ export async function runDailyLearning(options = {}) {
   };
 
   await mkdir(learningDir, { recursive: true });
-  const existingSignals = await readJsonl(paths.signalsPath);
+  const rawSignals = await readJsonl(paths.signalsPath);
+  const existingSignals = uniqueByKey(rawSignals, signalKey);
+  if (existingSignals.length !== rawSignals.length) {
+    await writeJsonlAtomically(paths.signalsPath, existingSignals);
+  }
   const existingKeys = new Set(existingSignals.map(signalKey));
   const created = [];
 
@@ -373,7 +404,11 @@ export async function runDailyLearning(options = {}) {
   }
 
   const allSignals = [...existingSignals, ...created];
-  const existingOutcomes = await readJsonl(paths.outcomesPath);
+  const rawOutcomes = await readJsonl(paths.outcomesPath);
+  const existingOutcomes = uniqueByKey(rawOutcomes, outcomeRecordKey);
+  if (existingOutcomes.length !== rawOutcomes.length) {
+    await writeJsonlAtomically(paths.outcomesPath, existingOutcomes);
+  }
 
   if (stage === "signals") {
     return writeLearningSummary(paths, allSignals, existingOutcomes, created, [], provider, intervals);
@@ -451,8 +486,8 @@ export async function rebuildLearningSummary(options = {}) {
     summaryPath: join(learningDir, "learning-summary.json"),
     summaryMdPath: join(learningDir, "learning-summary.md")
   };
-  const signals = await readJsonl(paths.signalsPath);
-  const outcomes = await readJsonl(paths.outcomesPath);
+  const signals = uniqueByKey(await readJsonl(paths.signalsPath), signalKey);
+  const outcomes = uniqueByKey(await readJsonl(paths.outcomesPath), outcomeRecordKey);
   const intervals = (options.intervals?.length ? options.intervals : ["1m", "5m", "15m", "1h", "4h", "1d"])
     .map(normalizeTimeframe);
   return writeLearningSummary(

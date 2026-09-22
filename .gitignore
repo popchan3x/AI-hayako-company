@@ -6,3 +6,4 @@ dist/
 .cache/
 *.log
 logs/site-startup.jsonl
+data/learning/backups/
