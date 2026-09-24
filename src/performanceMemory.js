@@ -119,9 +119,9 @@ export async function buildPerformanceGuard({ symbol, interval, leadModel, confi
     : score >= 60 ? 80
       : score >= 45 ? 70
         : 62;
-  const finalCap = highConfidenceBroken ? Math.min(confidenceCap, 74) : confidenceCap;
+  const finalCap = highConfidenceBroken ? Math.min(confidenceCap, 70) : confidenceCap;
   const weakAcrossCoreChecks = negativeCore >= 2 && positiveChecks < 2;
-  const brokenHighConfidence = highConfidenceBroken && confidence >= 75 && positiveChecks < 2;
+  const brokenHighConfidence = highConfidenceBroken && confidence >= 60 && positiveChecks < 2;
   const shouldStandAside = score < 45 || weakAcrossCoreChecks || brokenHighConfidence;
   const status = shouldStandAside ? "見送り優先" : scoreStatus;
   const strongest = [...checks].sort((a, b) => b.score - a.score)[0];

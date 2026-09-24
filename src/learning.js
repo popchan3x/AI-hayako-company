@@ -414,8 +414,6 @@ export async function runDailyLearning(options = {}) {
     return writeLearningSummary(paths, allSignals, existingOutcomes, created, [], provider, intervals);
   }
 
-  await writeLearningSummary(paths, allSignals, existingOutcomes, created, [], provider, intervals);
-
   const existingOutcomeKeys = new Set(existingOutcomes.map((outcome) => outcome.id));
   const evaluated = [];
   const candlesBySymbol = new Map();
