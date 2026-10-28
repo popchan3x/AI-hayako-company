@@ -1,15 +1,17 @@
-param(
+﻿param(
   [string]$TaskName = "Hayako Market AI - Start Site at Logon"
 )
 
 $ErrorActionPreference = "Stop"
 
-$launcherPath = Join-Path $PSScriptRoot "start-site-hidden.ps1"
-$powershellPath = Join-Path $PSHOME "powershell.exe"
+# A Windows application launcher prevents Terminal console delegation entirely.
+$launcherPath = Join-Path $PSScriptRoot "StartSiteSilent.exe"
+$launcherSource = Join-Path $PSScriptRoot "StartSiteSilent.cs"
+$compiler = Join-Path $env:WINDIR "Microsoft.NET\Framework64\v4.0.30319\csc.exe"
+& $compiler /nologo /target:winexe /optimize+ "/out:$launcherPath" $launcherSource
+if ($LASTEXITCODE -ne 0) { throw "Failed to compile the silent site launcher." }
 $currentUser = [System.Security.Principal.WindowsIdentity]::GetCurrent().Name
-
-$arguments = "-NoProfile -ExecutionPolicy Bypass -WindowStyle Hidden -File `"$launcherPath`" -SkipDelay"
-$action = New-ScheduledTaskAction -Execute $powershellPath -Argument $arguments
+$action = New-ScheduledTaskAction -Execute $launcherPath -WorkingDirectory (Split-Path -Parent $PSScriptRoot)
 $triggers = @(
   New-ScheduledTaskTrigger -AtLogOn -User $currentUser
   New-ScheduledTaskTrigger -Daily -At "09:00"

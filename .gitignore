@@ -7,3 +7,4 @@ dist/
 *.log
 logs/site-startup.jsonl
 data/learning/backups/
+scripts/StartSiteSilent.exe

@@ -1,4 +1,4 @@
-param([switch]$SkipDelay)
+﻿param([switch]$SkipDelay)
 
 $ErrorActionPreference = "Stop"
 
@@ -47,7 +47,7 @@ try {
     -FilePath $nodePath `
     -ArgumentList "--use-system-ca", "src/server.js" `
     -WorkingDirectory $projectRoot `
-    -WindowStyle Hidden `
+    -NoNewWindow `
     -RedirectStandardOutput $stdoutPath `
     -RedirectStandardError $stderrPath `
     -PassThru
