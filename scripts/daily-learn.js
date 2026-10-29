@@ -92,7 +92,7 @@ function runInterval(interval, timeoutMs) {
 
 async function runSplitByInterval({ provider, intervals, stage }) {
   const normalTimeoutMs = parseTimeout("interval-timeout-ms", 240000);
-  const oneDayTimeoutMs = parseTimeout("interval-timeout-1d-ms", 600000);
+  const oneDayTimeoutMs = parseTimeout("interval-timeout-1d-ms", 900000);
   const runs = [];
   let latestSummary = null;
 
